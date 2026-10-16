@@ -72,22 +72,21 @@ function clip(text: string, max: number): string {
 }
 
 /**
- * What an instruction file names, without its rules: its section titles and the
- * code-formatted names it uses (paths, commands, identifiers). The rewriter can
- * then name things precisely but has no rule text to copy into the prompt.
+ * What an instruction file names, without its rules: the code-formatted names it
+ * uses (paths, commands, identifiers). The rewriter can then name things precisely
+ * but has no rule text, not even a section title, to copy into the prompt.
  */
 export function instructionNames(path: string, text: string): string {
-  const sections = [...text.matchAll(/^#{1,6}\s+(.+)$/gm)].map(m => (m[1] ?? '').trim())
   const names = [...new Set([...text.matchAll(/`([^`\n]{2,80})`/g)].map(m => m[1] ?? ''))].slice(0, MAX_NAMES)
-  if (sections.length === 0 && names.length === 0) return ''
-  return `<instruction_file path="${path}">\nSections: ${sections.join('; ')}\nNames: ${names.map(n => `\`${n}\``).join(', ')}\n</instruction_file>`
+  if (names.length === 0) return ''
+  return `<instruction_file path="${path}">\nNames: ${names.map(n => `\`${n}\``).join(', ')}\n</instruction_file>`
 }
 
 /** The project's context, read live: instruction file names, skills, tools and the end of the conversation. */
 async function projectContext($: EngineInterface): Promise<string> {
   const parts: string[] = [
     `Working directory: ${await $.session.cwd()}`,
-    'Claude Code loads the instruction files below with every prompt and the agent follows them. You see only their section titles and the names they use, so you can name things precisely.',
+    'Claude Code loads the instruction files below with every prompt and the agent follows them. You see only the names they use, so you can name things precisely.',
   ]
   const home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))
   if (home !== undefined) {
