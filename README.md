@@ -25,6 +25,8 @@ The mod gives better rewrites when your project has a `project-context.md` file:
 - **Create it:** when the file is missing, a blue **Create project context** button shows to the left of **Enhance prompt**. Click it once: Claude writes the file with the mod's `project-context` skill.
 - **Keep it current:** Claude uses the same skill on its own to update the file after changes that add, remove or rename features, parts or key files. It never creates the file on its own. You can also run `/prompt-enhancer:project-context` at any time.
 
+![The blue Create project context button above the prompt box](docs/create-project-context.png)
+
 ## How it works
 
 - The enhancer reads the draft in your prompt box.
@@ -94,7 +96,8 @@ Then start a new session.
 | `skills/project-context/SKILL.md` | The skill that creates and updates `project-context.md`. |
 | `types/index.d.ts` | The types of the values the mod keeps for the session. |
 | `tests/enhance.test.tsx` | Tests, run with `claude plugin test .` |
-| `docs/before-after.png` | The example image above. |
+| `docs/before-after.png` | The before and after example image. |
+| `docs/create-project-context.png` | The Create project context button image. |
 
 ## License
 
