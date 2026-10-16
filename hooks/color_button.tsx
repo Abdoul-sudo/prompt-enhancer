@@ -8,7 +8,7 @@ type State = { isHovered: boolean }
  * as its own native control and ignores colors inside it; a `Client` region is
  * drawn with the plugin's own colors, so the press is posted to the hooks module.
  */
-const OrangeButton: ClientModule<Props, State> = (props, surface) => {
+const ColorButton: ClientModule<Props, State> = (props, surface) => {
   const { Box, Text } = surface.elements
   const isHovered = surface.state?.isHovered ?? false
   const isInside = (x: number, y: number) => x >= 0 && y >= 0 && x < surface.columns && y < surface.rows
@@ -28,4 +28,4 @@ const OrangeButton: ClientModule<Props, State> = (props, surface) => {
   )
 }
 
-export default OrangeButton
+export default ColorButton

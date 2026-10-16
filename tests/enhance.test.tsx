@@ -11,6 +11,7 @@ type Opts = {
   box?: string
   reply?: string
   boxAfter?: string
+  noProjectContext?: boolean
 }
 
 function world(on: On, opts: Opts = {}) {
@@ -39,8 +40,8 @@ function world(on: On, opts: Opts = {}) {
   on('session.cwd', async () => ok('/repo'))
   on('fs.read', async ($, e) => (e.path.replace(/\\/g, '/').includes('/home/u/.claude/CLAUDE.md') ? ok('# Commits\nCommit with `git commit` and a short message.') : ok('')))
   on('fs.ancestors', async ($, e) =>
-    e.names.includes('context.md')
-      ? ok([{ dir: '/repo', name: 'context.md', content: 'A puzzle game where the player programs a robot.', parts: [] }])
+    e.names.includes('project-context.md')
+      ? ok(opts.noProjectContext ? [] : [{ dir: '/repo', name: 'project-context.md', content: 'A puzzle game where the player programs a robot.', parts: [] }])
       : ok([{ dir: '/repo', name: 'CLAUDE.md', content: '# Code\nTyped GDScript, entry scene `refonte/main.tscn`.', parts: [] }]),
   )
   on('command.list', async () => ok([{ name: 'verify-game', description: 'Check levels in the real engine', source: 'user' }]))
@@ -62,8 +63,12 @@ function world(on: On, opts: Opts = {}) {
   })
   on('ui.render', async () => ({ type: 'Box', props: {}, children: [] }) as never)
   on('session.start', async () => ({ cwd: '/repo' }) as never)
-  on('prompt.submit', async ($, e) => ({ text: e.text }))
-  return { box, filled, toasts, forks, systems, asks }
+  const submitted: string[] = []
+  on('prompt.submit', async ($, e) => {
+    submitted.push(e.text)
+    return { text: e.text }
+  })
+  return { box, filled, toasts, forks, systems, asks, submitted }
 }
 
 const start = ($: Engine) => $.session.start({ source: 'startup', cwd: '/repo', surface: 'terminal', isInteractive: true } as never)
@@ -147,7 +152,7 @@ test('one Sonnet call at medium effort carries the instruction files names, skil
   expect(w.systems[0]).not.toContain('Commits')
   expect(w.systems[0]).not.toContain('short message')
   expect(w.systems[0]).not.toContain('Typed GDScript')
-  expect(w.systems[0]).toContain('<project_context path="/repo/context.md">\nA puzzle game where the player programs a robot.\n</project_context>')
+  expect(w.systems[0]).toContain('<project_context path="/repo/project-context.md">\nA puzzle game where the player programs a robot.\n</project_context>')
   expect(w.systems[0]).toContain('- verify-game: Check levels in the real engine')
   expect(w.systems[0]).toContain('Tools: Bash')
   expect(w.systems[0]).toContain('<user>\nthe robot lands one cell short\n</user>')
@@ -204,4 +209,26 @@ test('recent messages keep both sides of the last 8 exchanges, without machine t
   expect(picked).toEqual(['fix the jump', 'Jump lands short because of the floor check.', 'and the docs?', 'Docs are updated.'])
   const long = Array.from({ length: 20 }, (_, i) => m(i % 2 === 0 ? 'user' : 'assistant', `message ${i}`))
   expect(recentMessages(long).map(x => x.text)).toEqual(long.slice(4).map(x => x.text))
+})
+
+test('a project without project-context.md gets a blue Create button left of Enhance, which asks Claude to write it', async ($, on) => {
+  const w = world(on, { box: 'fix the jump', noProjectContext: true })
+  await start($)
+  for (const surface of ['terminal', 'desktop'] as const) {
+    expect(await buttons($, surface)).toEqual(['create-context', 'enhance'])
+    const ui = await $.ui.mount({ plugin: 'prompt-enhancer', surface, ...BAND })
+    expect(await ui.drawn({ in: 'create-context' })).toMatchObject({ type: 'Box', props: { backgroundColor: '#60A5FA' } })
+    await ui.post('press', { in: 'create-context' })
+    await ui.unmount()
+  }
+  expect(w.submitted).toEqual([
+    'Create project-context.md for this project with the prompt-enhancer project-context skill.',
+    'Create project-context.md for this project with the prompt-enhancer project-context skill.',
+  ])
+})
+
+test('a project with project-context.md shows no Create button', async ($, on) => {
+  world(on, { box: 'fix the jump' })
+  await start($)
+  expect(await buttons($, 'terminal')).toEqual(['enhance'])
 })

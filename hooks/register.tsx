@@ -4,18 +4,24 @@ import type { EngineInterface, Register } from 'claude-code'
 const hasDraft = atom({ plugin: 'prompt-enhancer', key: 'hasDraft' } as const, null)
 const isBusy = atom({ plugin: 'prompt-enhancer', key: 'isBusy' } as const, false)
 const original = atom({ plugin: 'prompt-enhancer', key: 'original' } as const, null)
+const hasProjectContext = atom({ plugin: 'prompt-enhancer', key: 'hasProjectContext' } as const, null)
 
 const MAX_NAMES = 150
 const MAX_MESSAGE_CHARS = 2000
 /** One exchange is the user's message and the agent's reply. */
 const RECENT_EXCHANGES = 8
+/** The project description the mod reads; its `project-context` skill writes it. */
+const PROJECT_CONTEXT_FILE = 'project-context.md'
 const MAX_CONTEXT_FILE_CHARS = 20000
+const CREATE_CONTEXT_PROMPT = 'Create project-context.md for this project with the prompt-enhancer project-context skill.'
 /** Alias the engine resolves to the newest Sonnet, as `--model sonnet` does. */
 const MODEL = 'sonnet'
 /** Tested: as fast as low on short drafts, with shorter and cleaner rewrites. */
 const EFFORT = 'medium'
 const ORANGE = '#F97316'
 const ORANGE_HOVER = '#FB923C'
+const BLUE = '#60A5FA'
+const BLUE_HOVER = '#93C5FD'
 const PERSON_ORIGINS: ReadonlySet<string> = new Set(['composer', 'bridge', 'sdk'])
 
 /**
@@ -95,7 +101,7 @@ export function recentMessages<M extends { role: string; text: string }>(message
     .slice(-2 * RECENT_EXCHANGES)
 }
 
-/** The project's context, read live: instruction file names, context.md, skills, tools and the end of the conversation. */
+/** The project's context, read live: instruction file names, project-context.md, skills, tools and the end of the conversation. */
 async function projectContext($: EngineInterface): Promise<string> {
   const parts: string[] = [
     `Working directory: ${await $.session.cwd()}`,
@@ -113,8 +119,8 @@ async function projectContext($: EngineInterface): Promise<string> {
     const summary = instructionNames(`${f.dir}/${f.name}`, f.content)
     if (summary !== '') parts.push(summary)
   }
-  // A context.md describes the project itself (what it is, its parts, its files), so it is sent whole.
-  const contextFiles = await $.fs.ancestors({ names: ['context.md'] }).catch(() => [])
+  // project-context.md describes the project itself (what it is, its parts, its files), so it is sent whole.
+  const contextFiles = await $.fs.ancestors({ names: [PROJECT_CONTEXT_FILE] }).catch(() => [])
   for (const f of contextFiles) {
     parts.push(`<project_context path="${f.dir}/${f.name}">\n${clip(f.content, MAX_CONTEXT_FILE_CHARS)}\n</project_context>`)
   }
@@ -185,11 +191,23 @@ async function restore($: EngineInterface): Promise<void> {
   await update($, original, () => null)
 }
 
+/** Whether the project has a project-context.md, so the band offers to create one only when it is missing. */
+async function refreshProjectContext($: EngineInterface): Promise<void> {
+  const found = await $.fs.ancestors({ names: [PROJECT_CONTEXT_FILE] }).catch(() => [])
+  await update($, hasProjectContext, () => found.length > 0)
+}
+
+/** Asks Claude to write project-context.md with the mod's skill, as a turn the user watches. */
+async function createProjectContext($: EngineInterface): Promise<void> {
+  await $.prompt.submit({ text: CREATE_CONTEXT_PROMPT })
+}
+
 export const register: Register = on => {
   let knownDraft: boolean | null = null
 
   on('session.start', async ($, e, next) => {
     await update($, isBusy, () => false)
+    await refreshProjectContext($)
     await $.command.register({
       name: 'enhance',
       description: 'Rewrite a prompt into a clearer one for this project and put it in the prompt box',
@@ -221,6 +239,17 @@ export const register: Register = on => {
   on('command.run', { command: 'enhance' }, async ($, e) => ({ text: await enhance($, e.args) }))
 
   // The orange Client button posts 'press' when clicked or when Enter reaches it.
+  // A turn may have created or removed project-context.md.
+  on('turn.complete', async ($, e, next) => {
+    if (e.agentId === undefined) await refreshProjectContext($).catch(() => undefined)
+    return next(e)
+  })
+
+  on('ui.message', { element: 'create-context' }, async ($, e, next) => {
+    if (e.data === 'press') await createProjectContext($)
+    return next(e)
+  })
+
   on('ui.message', { element: 'enhance' }, async ($, e, next) => {
     if (e.data === 'press') $.ui.toast(await enhance($))
     return next(e)
@@ -232,7 +261,8 @@ export const register: Register = on => {
     const draft = await read($, hasDraft)
     const before = await read($, original)
     const canEnhance = !busy && draft !== false
-    if (!busy && !canEnhance && before === null) return next(e)
+    const canCreateContext = !busy && (await read($, hasProjectContext)) === false
+    if (!busy && !canEnhance && before === null && !canCreateContext) return next(e)
     const elements = $.ui.resolve(e)
     const { Box, Button, Text } = elements
     const Client = 'Client' in elements ? elements.Client : undefined
@@ -240,12 +270,26 @@ export const register: Register = on => {
     return (
       <Box flexDirection="column">
         <Box flexDirection="row" justifyContent="flex-end" width="100%" gap={1}>
+          {canCreateContext &&
+            (Client !== undefined ? (
+              <Client
+                key="create-context"
+                module="./color_button.tsx"
+                props={{ label: 'Create project context', color: BLUE, hoverColor: BLUE_HOVER }}
+              />
+            ) : (
+              <Button key="create-context" onPress={() => createProjectContext($)}>
+                <Text color={BLUE} bold>
+                  Create project context
+                </Text>
+              </Button>
+            ))}
           {busy && <Text color={ORANGE}>Enhancing prompt…</Text>}
           {canEnhance &&
             (Client !== undefined ? (
               <Client
                 key="enhance"
-                module="./orange_button.tsx"
+                module="./color_button.tsx"
                 props={{ label: 'Enhance prompt', color: ORANGE, hoverColor: ORANGE_HOVER }}
               />
             ) : (

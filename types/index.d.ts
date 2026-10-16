@@ -9,6 +9,8 @@ declare module 'claude-code' {
       /** True while a rewrite runs. */
       isBusy: boolean
       original: OriginalDraft
+      /** Whether the project has a project-context.md; null until checked. */
+      hasProjectContext: boolean | null
     }
   }
 }
