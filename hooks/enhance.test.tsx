@@ -128,11 +128,11 @@ test('edits made while enhancing are never overwritten', async ($, on) => {
   expect(w.box.text).toBe('fix it now')
 })
 
-test('one Sonnet call at medium effort carries the project files, skills, tools and recent conversation', async ($, on) => {
+test('one Sonnet call at low effort carries the project files, skills, tools and recent conversation', async ($, on) => {
   const w = world(on, { box: 'check level 3', reply: '<prompt>Check level 3 with the verify-game skill.</prompt>' })
   await start($)
   await press($, 'terminal', 'enhance')
-  expect(w.asks).toEqual([{ model: 'sonnet', effort: 'medium' }])
+  expect(w.asks).toEqual([{ model: 'sonnet', effort: 'low' }])
   expect(w.systems[0]).toContain('Global rule: answer briefly.')
   expect(w.systems[0]).toContain('Project rule: typed GDScript.')
   expect(w.systems[0]).toContain('- verify-game: Check levels in the real engine')

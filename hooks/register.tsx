@@ -10,7 +10,8 @@ const MAX_MESSAGE_CHARS = 2000
 const RECENT_MESSAGES = 8
 /** Alias the engine resolves to the newest Sonnet, as `--model sonnet` does. */
 const MODEL = 'sonnet'
-const EFFORT = 'medium'
+/** A short rewrite behind a button: speed matters more than deep thinking. */
+const EFFORT = 'low'
 const ORANGE = '#F97316'
 const ORANGE_HOVER = '#FB923C'
 const PERSON_ORIGINS: ReadonlySet<string> = new Set(['composer', 'bridge', 'sdk'])
@@ -74,7 +75,7 @@ async function projectContext($: EngineInterface): Promise<string> {
   return `You are Claude Code, about to receive a prompt in this project. Its context:\n\n${parts.join('\n\n')}`
 }
 
-/** Rewrites the draft with one Sonnet call at medium effort, fed the project's context. */
+/** Rewrites the draft with one Sonnet call at low effort, fed the project's context. */
 async function rewrite($: EngineInterface, draft: string): Promise<{ text: string } | { reason: string }> {
   const reply = await $.model.complete({
     model: MODEL,

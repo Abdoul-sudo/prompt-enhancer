@@ -17,15 +17,44 @@ Answer `y` to add the marketplace, then pick the user scope. The mod then loads 
 ## How it works
 
 - Reads the draft in your prompt box. Nothing is sent.
-- Makes one call to the newest **Sonnet** at **medium** effort. It gives it your `CLAUDE.md` files, your skills and commands, the tool names and the last few messages of the conversation.
+- Makes one model call. It gives the model your `CLAUDE.md` files, your skills and commands, the tool names and the last few messages of the conversation.
 - Puts the rewrite in the prompt box. A clear prompt comes back unchanged.
 - `/enhance <prompt>` does the same from the keyboard.
 
-To change the model or effort, edit `MODEL` and `EFFORT` at the top of `hooks/register.tsx`.
+## Model
 
-## Develop
+| Setting | Value | Why |
+| --- | --- | --- |
+| Model | `sonnet` (the newest Claude Sonnet) | Good judgment about what to keep and what to add, at a fraction of Opus's cost and wait. |
+| Effort | `low` | A short rewrite behind a button: speed matters more than deep thinking. |
 
-```
-claude plugin validate .
-claude plugin test .
-```
+Each click uses your Claude Code account, like any other request.
+
+### Change the model or effort
+
+1. If you installed it from GitHub, remove that copy first:
+
+   ```
+   claude plugin uninstall prompt-enhancer@prompt-enhancer
+   claude plugin marketplace remove prompt-enhancer
+   ```
+
+   Then clone your own copy and install it from that folder:
+
+   ```
+   git clone https://github.com/Abdoul-sudo/prompt-enhancer
+   claude plugin marketplace add ./prompt-enhancer
+   claude plugin install prompt-enhancer@prompt-enhancer --scope user
+   ```
+
+2. Open `hooks/register.tsx` and edit the two lines at the top:
+
+   ```ts
+   const MODEL = 'sonnet'
+   const EFFORT = 'low'
+   ```
+
+   - `MODEL`: an alias (`haiku`, `sonnet`, `opus`) or a full model id such as `claude-opus-5-5`.
+   - `EFFORT`: `low`, `medium`, `high`, `xhigh` or `max`. Higher is slower and costs more.
+
+3. Start a new session, or run `/reload-plugins` in a terminal session.
