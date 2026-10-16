@@ -1,3 +1,4 @@
 .claude-plugin/types/
 .in_use/
 tsconfig.json
+eval/
