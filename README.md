@@ -4,6 +4,8 @@ A Claude Code mod that turns a vague prompt into a clear one, using the project 
 
 Type a prompt, click the orange **Enhance prompt** button above the prompt box, review the result, then send it yourself. **Restore original** puts your text back.
 
+![A vague draft, then the same draft after one click on Enhance prompt](docs/before-after.png)
+
 ## Install
 
 In a Claude Code terminal session, run:
@@ -87,6 +89,7 @@ Then start a new session.
 | `hooks/orange_button.tsx` | The orange button, drawn as its own region so the desktop app keeps its color. |
 | `types/index.d.ts` | The types of the values the mod keeps for the session. |
 | `tests/enhance.test.tsx` | Tests, run with `claude plugin test .` |
+| `docs/before-after.png` | The example image above. |
 
 ## License
 
