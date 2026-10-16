@@ -17,7 +17,7 @@ Answer `y` to add the marketplace, then pick the user scope. The mod then loads 
 ## How it works
 
 - Reads the draft in your prompt box. Nothing is sent.
-- Makes one model call. It gives the model your `CLAUDE.md` files, your skills and commands, the tool names and the last few messages of the conversation.
+- Makes one model call. It sends the text in your prompt box together with your `CLAUDE.md` files, your skills and commands, the tool names and the last few messages of the conversation.
 - Puts the rewrite in the prompt box. A clear prompt comes back unchanged.
 - `/enhance <prompt>` does the same from the keyboard.
 

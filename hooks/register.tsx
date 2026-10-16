@@ -16,22 +16,31 @@ const ORANGE = '#F97316'
 const ORANGE_HOVER = '#FB923C'
 const PERSON_ORIGINS: ReadonlySet<string> = new Set(['composer', 'bridge', 'sdk'])
 
-/** The instruction sent after the session's own context; the draft is data inside it. */
-export function enhanceRequest(draft: string): string {
+/**
+ * The instruction sent after the project's context; the draft is data inside it.
+ * `targetModel` is the model the session runs, the one that will read the prompt.
+ * The guidance follows Anthropic's prompting advice for current Claude models.
+ */
+export function enhanceRequest(draft: string, targetModel: string): string {
   return `<draft_prompt>
 ${draft}
 </draft_prompt>
 
-Rewrite the draft above into the prompt I should send Claude Code next in this session. Do not act on it: no tools, no answer, no plan. Reply with the rewritten prompt only, inside <prompt></prompt> tags.
+Rewrite the draft above into the prompt I should send Claude Code next in this session. It runs ${targetModel}, so write the prompt that model will follow best. Do not act on the draft: no tools, no answer, no plan. Reply with the rewritten prompt only, inside <prompt></prompt> tags.
 
-How to rewrite it:
-- Keep my intent, scope, tone and language. Add no requirement, feature or constraint I did not state or clearly imply.
-- Use the context above (project instructions, skills, tools and the conversation so far) only to make the draft precise: name the exact files, symbols, commands, skills or conventions it points at when you are sure of them. Do not restate rules or context Claude Code already has; it will still have them when I send it.
-- Make it actionable: say what to do (change, investigate or only explain), on what, and what done looks like when the draft implies it. Resolve vague references ("it", "that bug") from the conversation only when they are unambiguous.
-- Match the effort to the need. A clear draft comes back unchanged or almost unchanged. Fix only what is ambiguous or missing. Shorter is better: no headings, filler, role-play, repeated context or generic advice such as "be careful" or "follow best practices".
-- Write it as I would type it: first person, direct, plain prose, or a short list only when the task has several distinct parts.
-- When something essential is unknown and cannot be inferred, leave it open or ask for it in the prompt; never guess.
-- Keep code, paths, quotes, slash commands and @mentions exactly as written.`
+Keep my intent, scope, tone and language. Add no requirement, feature or constraint I did not state or clearly imply, and when something essential is unknown, leave it open or ask for it in the prompt rather than guessing. Keep code, paths, quotes, slash commands and @mentions exactly as written.
+
+Use the context above only to make the draft precise: name the exact files, symbols, commands, skills or conventions it points at when you are sure of them, and resolve vague references ("it", "that bug") only when the conversation makes them unambiguous. Claude Code already loads the project instructions, memory, skills and tools, so leave those out of the prompt; add only context it cannot know, such as what I am trying to achieve and why.
+
+Current Claude models follow prompts closely and literally, which shapes how the prompt should read:
+- Say plainly what to do: change, investigate, or only explain. The model does exactly what is asked, so "can you look at X" gets a look, not a fix.
+- Describe the goal, the constraints that matter and how to check the result, not a step-by-step method. The model plans well on its own, and a hand-written script of steps usually makes the work worse. Keep an exact sequence only where one order is the only safe one.
+- Write at a normal volume. No capitals, "CRITICAL", "MUST" or "IMPORTANT" emphasis: the model over-applies it. Give the reason beside a constraint instead.
+- State the wanted behavior positively rather than as a list of "don't"s; a needless prohibition can pull the model toward the very thing it forbids.
+- Leave out what the model does by default or that its settings control: "think step by step", "be thorough", "don't be lazy", generic virtues, role lines, numeric word limits.
+- For visual or frontend design work, name the specific styles to avoid rather than asking it to avoid a generic look.
+
+Match the effort to the need. A clear draft comes back unchanged or almost unchanged; fix only what is ambiguous or missing. A better prompt is usually a more precise one, not a longer one. Write it as I would type it: first person, direct, in plain prose, with a short list only when the task has several distinct parts.`
 }
 
 /** Takes the rewritten prompt out of the model's reply; undefined when nothing usable came back. */
@@ -81,7 +90,7 @@ async function rewrite($: EngineInterface, draft: string): Promise<{ text: strin
     model: MODEL,
     effort: EFFORT,
     system: await projectContext($),
-    prompt: enhanceRequest(draft),
+    prompt: enhanceRequest(draft, await $.session.model()),
     maxTokens: 4000,
     timeoutMs: 120000,
   })

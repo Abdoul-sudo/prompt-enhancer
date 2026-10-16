@@ -85,7 +85,8 @@ test('helpers: the reply is read from its tags, whitespace-only rewrites count a
   expect(extractPrompt('<prompt>  </prompt>')).toBeUndefined()
   expect(isSamePrompt('fix  the\nbug', 'fix the bug ')).toBe(true)
   expect(isSamePrompt('fix the bug', 'Fix the jump bug')).toBe(false)
-  expect(enhanceRequest('fix it')).toContain('<draft_prompt>\nfix it\n</draft_prompt>')
+  expect(enhanceRequest('fix it', 'claude-opus-5-5')).toContain('<draft_prompt>\nfix it\n</draft_prompt>')
+  expect(enhanceRequest('fix it', 'claude-opus-5-5')).toContain('It runs claude-opus-5-5')
 })
 
 test('Enhance replaces the draft without sending it, and Restore brings the original back', async ($, on) => {
@@ -133,6 +134,7 @@ test('one Sonnet call at low effort carries the project files, skills, tools and
   await start($)
   await press($, 'terminal', 'enhance')
   expect(w.asks).toEqual([{ model: 'sonnet', effort: 'low' }])
+  expect(w.forks[0]).toContain('It runs claude-opus-5-5')
   expect(w.systems[0]).toContain('Global rule: answer briefly.')
   expect(w.systems[0]).toContain('Project rule: typed GDScript.')
   expect(w.systems[0]).toContain('- verify-game: Check levels in the real engine')
