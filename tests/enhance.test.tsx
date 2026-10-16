@@ -140,21 +140,17 @@ test('edits made while enhancing are never overwritten', async ($, on) => {
   expect(w.box.text).toBe('fix it now')
 })
 
-test('one Sonnet call at medium effort carries the instruction files names, skills, tools and recent conversation', async ($, on) => {
+test('one Sonnet call at medium effort carries project-context.md and the recent conversation, not CLAUDE.md, skills or tools', async ($, on) => {
   const w = world(on, { box: 'check level 3', reply: '<prompt>Check level 3 with the verify-game skill.</prompt>' })
   await start($)
   await press($, 'terminal', 'enhance')
   expect(w.asks).toEqual([{ model: 'sonnet', effort: 'medium' }])
   expect(w.forks[0]).toContain('goes to Claude Opus 5.5')
   expect(w.systems[0]).toMatch(/^You are a prompt enhancer\./)
-  expect(w.systems[0]).toContain('Names: `git commit`')
-  expect(w.systems[0]).toContain('Names: `refonte/main.tscn`')
-  expect(w.systems[0]).not.toContain('Commits')
-  expect(w.systems[0]).not.toContain('short message')
-  expect(w.systems[0]).not.toContain('Typed GDScript')
   expect(w.systems[0]).toContain('<project_context path="/repo/project-context.md">\nA puzzle game where the player programs a robot.\n</project_context>')
-  expect(w.systems[0]).toContain('- verify-game: Check levels in the real engine')
-  expect(w.systems[0]).toContain('Tools: Bash')
+  for (const left of ['git commit', 'refonte/main.tscn', 'Typed GDScript', 'verify-game', 'Tools: Bash']) {
+    expect(w.systems[0]).not.toContain(left)
+  }
   expect(w.systems[0]).toContain('<user>\nthe robot lands one cell short\n</user>')
   expect(w.systems[0]).not.toContain('<assistant>')
   expect(w.filled).toEqual(['Check level 3 with the verify-game skill.'])

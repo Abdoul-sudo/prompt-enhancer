@@ -6,7 +6,6 @@ const isBusy = atom({ plugin: 'prompt-enhancer', key: 'isBusy' } as const, false
 const original = atom({ plugin: 'prompt-enhancer', key: 'original' } as const, null)
 const hasProjectContext = atom({ plugin: 'prompt-enhancer', key: 'hasProjectContext' } as const, null)
 
-const MAX_NAMES = 150
 const MAX_MESSAGE_CHARS = 2000
 /** One exchange is the user's message and the agent's reply. */
 const RECENT_EXCHANGES = 8
@@ -48,13 +47,13 @@ ${draft}
 Rewrite the user's draft above into the prompt they will send next. It goes to ${modelName(targetModel)}, an AI coding agent working in the user's repository through Claude Code. Do not act on the draft. Reply with the rewritten prompt only, inside <prompt></prompt> tags.
 
 <add_what_is_missing>
-A better prompt gives the agent what it would otherwise have to guess. Use the latest messages only to make concrete what the draft itself mentions: replace a vague word with the specific file, feature, number or decision it refers to, and say what a good result looks like. Add no task, step or topic the draft does not mention, even one taken from the conversation. Use the instruction file names and the project context only to name things precisely. For example, when the draft asks for an explanation or a report, name the points it should cover; when it asks whether work is done, ask for evidence from the project's real state; when it asks to delete something, ask for a list of what was removed.
+A better prompt gives the agent what it would otherwise have to guess. Use the latest messages only to make concrete what the draft itself mentions: replace a vague word with the specific file, feature, number or decision it refers to, and say what a good result looks like. Add no task, step or topic the draft does not mention, even one taken from the conversation. Use the project context only to name things precisely. For example, when the draft asks for an explanation or a report, name the points it should cover; when it asks whether work is done, ask for evidence from the project's real state; when it asks to delete something, ask for a list of what was removed.
 
 Keep the user's intent and scope. Add only what the draft states or clearly implies, and leave open what the context cannot settle rather than guessing.
 </add_what_is_missing>
 
 <leave_out>
-The agent already reads the instruction files with every prompt and follows them, so restate none of their rules, workflows or definitions, not even as a reminder or as the way to check the result; name something they define without repeating its definition. Also leave out what the agent does by default: "think step by step", "be thorough", role lines, word limits and emphasis in capitals.
+The agent already reads the project's instruction files (CLAUDE.md) with every prompt and follows them, so restate none of their rules, workflows or definitions, not even as a reminder or as the way to check the result; name something they define without repeating its definition. Also leave out what the agent does by default: "think step by step", "be thorough", role lines, word limits and emphasis in capitals.
 </leave_out>
 
 <style>
@@ -80,17 +79,6 @@ function clip(text: string, max: number): string {
 }
 
 /**
- * What an instruction file names, without its rules: the code-formatted names it
- * uses (paths, commands, identifiers). The rewriter can then name things precisely
- * but has no rule text, not even a section title, to copy into the prompt.
- */
-export function instructionNames(path: string, text: string): string {
-  const names = [...new Set([...text.matchAll(/`([^`\n]{2,80})`/g)].map(m => m[1] ?? ''))].slice(0, MAX_NAMES)
-  if (names.length === 0) return ''
-  return `<instruction_file path="${path}">\nNames: ${names.map(n => `\`${n}\``).join(', ')}\n</instruction_file>`
-}
-
-/**
  * The latest exchanges of the conversation, the user's messages and the agent's
  * replies alike. User rows that are machine text (task notices, reminders) start
  * with a tag and are left out.
@@ -101,33 +89,17 @@ export function recentMessages<M extends { role: string; text: string }>(message
     .slice(-2 * RECENT_EXCHANGES)
 }
 
-/** The project's context, read live: instruction file names, project-context.md, skills, tools and the end of the conversation. */
+/**
+ * The project's context, read live: project-context.md and the end of the conversation.
+ * CLAUDE.md, skills and tools are left out: the agent that runs the prompt already has them.
+ */
 async function projectContext($: EngineInterface): Promise<string> {
-  const parts: string[] = [
-    `Working directory: ${await $.session.cwd()}`,
-    'Claude Code loads the instruction files below with every prompt and the agent follows them. You see only the names they use, so you can name things precisely.',
-  ]
-  const home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))
-  if (home !== undefined) {
-    const path = `${home}/.claude/CLAUDE.md`
-    const text = await $.fs.read(path).catch(() => '')
-    const summary = instructionNames(path, text)
-    if (summary !== '') parts.push(summary)
-  }
-  const files = await $.fs.ancestors({ names: ['CLAUDE.md', '.claude/CLAUDE.md', 'CLAUDE.local.md'] }).catch(() => [])
-  for (const f of files) {
-    const summary = instructionNames(`${f.dir}/${f.name}`, f.content)
-    if (summary !== '') parts.push(summary)
-  }
+  const parts: string[] = [`Working directory: ${await $.session.cwd()}`]
   // project-context.md describes the project itself (what it is, its parts, its files), so it is sent whole.
   const contextFiles = await $.fs.ancestors({ names: [PROJECT_CONTEXT_FILE] }).catch(() => [])
   for (const f of contextFiles) {
     parts.push(`<project_context path="${f.dir}/${f.name}">\n${clip(f.content, MAX_CONTEXT_FILE_CHARS)}\n</project_context>`)
   }
-  const commands =(await $.command.list().catch(() => [])).filter(c => c.source !== 'builtin')
-  if (commands.length > 0) parts.push(`Skills and commands:\n${commands.map(c => `- ${c.name}: ${c.description}`).join('\n')}`)
-  const tools = await $.tool.list().catch(() => [])
-  if (tools.length > 0) parts.push(`Tools: ${tools.map(t => t.name).join(', ')}`)
   const messages = await $.session.messages().catch(() => [])
   const recent = recentMessages(Array.isArray(messages) ? messages : [])
   if (recent.length > 0) {
