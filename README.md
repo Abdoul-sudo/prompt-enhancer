@@ -25,6 +25,14 @@ The mod gives better rewrites when your project has a `project-context.md` file:
 - **Create it:** when the file is missing, a blue **Create project context** button shows to the left of **Enhance prompt**. Click it once: Claude writes the file with the mod's `project-context` skill.
 - **Keep it current:** Claude uses the same skill on its own after changes that add, remove or rename features, parts or key files. You can also run `/prompt-enhancer:project-context` at any time.
 
+## How it works
+
+- The enhancer reads the draft in your prompt box.
+- The AI reads the last 8 exchanges of your conversation: your messages and Claude's replies.
+- The AI reads your `project-context.md` if it exists, up to 20,000 characters.
+- The AI rewrites the prompt for the model you use in the current session.
+- The enhancer puts the new prompt in your prompt box. Nothing is sent.
+
 ## Model
 
 | Setting | Value | Why |
