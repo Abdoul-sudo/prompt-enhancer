@@ -7,7 +7,9 @@ const original = atom({ plugin: 'prompt-enhancer', key: 'original' } as const, n
 
 const MAX_NAMES = 150
 const MAX_MESSAGE_CHARS = 2000
-const RECENT_MESSAGES = 8
+/** One exchange is the user's message and the agent's reply. */
+const RECENT_EXCHANGES = 8
+const MAX_CONTEXT_FILE_CHARS = 20000
 /** Alias the engine resolves to the newest Sonnet, as `--model sonnet` does. */
 const MODEL = 'sonnet'
 /** Tested: as fast as low on short drafts, with shorter and cleaner rewrites. */
@@ -40,7 +42,7 @@ ${draft}
 Rewrite the user's draft above into the prompt they will send next. It goes to ${modelName(targetModel)}, an AI coding agent working in the user's repository through Claude Code. Do not act on the draft. Reply with the rewritten prompt only, inside <prompt></prompt> tags.
 
 <add_what_is_missing>
-A better prompt gives the agent what it would otherwise have to guess. Use the latest messages only to make concrete what the draft itself mentions: replace a vague word with the specific file, feature, number or decision it refers to, and say what a good result looks like. Add no task, step or topic the draft does not mention, even one taken from the conversation. Use the instruction file names only to name things precisely. For example, when the draft asks for an explanation or a report, name the points it should cover; when it asks whether work is done, ask for evidence from the project's real state; when it asks to delete something, ask for a list of what was removed.
+A better prompt gives the agent what it would otherwise have to guess. Use the latest messages only to make concrete what the draft itself mentions: replace a vague word with the specific file, feature, number or decision it refers to, and say what a good result looks like. Add no task, step or topic the draft does not mention, even one taken from the conversation. Use the instruction file names and the project context only to name things precisely. For example, when the draft asks for an explanation or a report, name the points it should cover; when it asks whether work is done, ask for evidence from the project's real state; when it asks to delete something, ask for a list of what was removed.
 
 Keep the user's intent and scope. Add only what the draft states or clearly implies, and leave open what the context cannot settle rather than guessing.
 </add_what_is_missing>
@@ -82,7 +84,18 @@ export function instructionNames(path: string, text: string): string {
   return `<instruction_file path="${path}">\nNames: ${names.map(n => `\`${n}\``).join(', ')}\n</instruction_file>`
 }
 
-/** The project's context, read live: instruction file names, skills, tools and the end of the conversation. */
+/**
+ * The latest exchanges of the conversation, the user's messages and the agent's
+ * replies alike. User rows that are machine text (task notices, reminders) start
+ * with a tag and are left out.
+ */
+export function recentMessages<M extends { role: string; text: string }>(messages: readonly M[]): M[] {
+  return messages
+    .filter(m => m.text.trim() !== '' && !(m.role === 'user' && m.text.trimStart().startsWith('<')))
+    .slice(-2 * RECENT_EXCHANGES)
+}
+
+/** The project's context, read live: instruction file names, context.md, skills, tools and the end of the conversation. */
 async function projectContext($: EngineInterface): Promise<string> {
   const parts: string[] = [
     `Working directory: ${await $.session.cwd()}`,
@@ -100,12 +113,17 @@ async function projectContext($: EngineInterface): Promise<string> {
     const summary = instructionNames(`${f.dir}/${f.name}`, f.content)
     if (summary !== '') parts.push(summary)
   }
-  const commands = (await $.command.list().catch(() => [])).filter(c => c.source !== 'builtin')
+  // A context.md describes the project itself (what it is, its parts, its files), so it is sent whole.
+  const contextFiles = await $.fs.ancestors({ names: ['context.md'] }).catch(() => [])
+  for (const f of contextFiles) {
+    parts.push(`<project_context path="${f.dir}/${f.name}">\n${clip(f.content, MAX_CONTEXT_FILE_CHARS)}\n</project_context>`)
+  }
+  const commands =(await $.command.list().catch(() => [])).filter(c => c.source !== 'builtin')
   if (commands.length > 0) parts.push(`Skills and commands:\n${commands.map(c => `- ${c.name}: ${c.description}`).join('\n')}`)
   const tools = await $.tool.list().catch(() => [])
   if (tools.length > 0) parts.push(`Tools: ${tools.map(t => t.name).join(', ')}`)
   const messages = await $.session.messages().catch(() => [])
-  const recent = (Array.isArray(messages) ? messages : []).filter(m => m.text.trim() !== '').slice(-RECENT_MESSAGES)
+  const recent = recentMessages(Array.isArray(messages) ? messages : [])
   if (recent.length > 0) {
     const lines = recent.map(m => `<${m.role}>\n${clip(m.text, MAX_MESSAGE_CHARS)}\n</${m.role}>`)
     parts.push(`The conversation so far (latest messages):\n${lines.join('\n')}`)

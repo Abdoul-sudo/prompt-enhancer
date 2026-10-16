@@ -2,7 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { enhanceRequest, extractPrompt, modelName } from '../hooks/register'
+import { enhanceRequest, extractPrompt, modelName, recentMessages } from '../hooks/register'
 
 const VOID = { value: undefined } as never
 const ok = (value: unknown) => ({ value }) as never
@@ -38,7 +38,11 @@ function world(on: On, opts: Opts = {}) {
   on('session.model', async () => ok('claude-opus-5-5'))
   on('session.cwd', async () => ok('/repo'))
   on('fs.read', async ($, e) => (e.path.replace(/\\/g, '/').includes('/home/u/.claude/CLAUDE.md') ? ok('# Commits\nCommit with `git commit` and a short message.') : ok('')))
-  on('fs.ancestors', async () => ok([{ dir: '/repo', name: 'CLAUDE.md', content: '# Code\nTyped GDScript, entry scene `refonte/main.tscn`.', parts: [] }]))
+  on('fs.ancestors', async ($, e) =>
+    e.names.includes('context.md')
+      ? ok([{ dir: '/repo', name: 'context.md', content: 'A puzzle game where the player programs a robot.', parts: [] }])
+      : ok([{ dir: '/repo', name: 'CLAUDE.md', content: '# Code\nTyped GDScript, entry scene `refonte/main.tscn`.', parts: [] }]),
+  )
   on('command.list', async () => ok([{ name: 'verify-game', description: 'Check levels in the real engine', source: 'user' }]))
   on('tool.list', async () => ok([{ name: 'Bash', description: 'Shell', mcp: false }]))
   on('prompt.read', async () => {
@@ -143,6 +147,7 @@ test('one Sonnet call at medium effort carries the instruction files names, skil
   expect(w.systems[0]).not.toContain('Commits')
   expect(w.systems[0]).not.toContain('short message')
   expect(w.systems[0]).not.toContain('Typed GDScript')
+  expect(w.systems[0]).toContain('<project_context path="/repo/context.md">\nA puzzle game where the player programs a robot.\n</project_context>')
   expect(w.systems[0]).toContain('- verify-game: Check levels in the real engine')
   expect(w.systems[0]).toContain('Tools: Bash')
   expect(w.systems[0]).toContain('<user>\nthe robot lands one cell short\n</user>')
@@ -184,4 +189,19 @@ test('a background task notice does not hide the button or drop the restore', as
   await press($, 'terminal', 'enhance')
   await $.prompt.submit({ text: '<task-notification/>', origin: { kind: 'task-notification' }, wait: false } as never)
   expect(await buttons($, 'terminal')).toEqual(['enhance', 'restore'])
+})
+
+test('recent messages keep both sides of the last 8 exchanges, without machine text', () => {
+  const m = (role: string, text: string) => ({ role, text })
+  const picked = recentMessages([
+    m('user', 'fix the jump'),
+    m('assistant', 'Jump lands short because of the floor check.'),
+    m('user', '<task-notification>done</task-notification>'),
+    m('user', 'and the docs?'),
+    m('assistant', ''),
+    m('assistant', 'Docs are updated.'),
+  ]).map(x => x.text)
+  expect(picked).toEqual(['fix the jump', 'Jump lands short because of the floor check.', 'and the docs?', 'Docs are updated.'])
+  const long = Array.from({ length: 20 }, (_, i) => m(i % 2 === 0 ? 'user' : 'assistant', `message ${i}`))
+  expect(recentMessages(long).map(x => x.text)).toEqual(long.slice(4).map(x => x.text))
 })
