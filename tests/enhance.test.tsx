@@ -80,6 +80,8 @@ function world(on: On, opts: Opts = {}) {
     submitted.push(e.text)
     return { text: e.text }
   })
+  on('turn.start', async ($, e) => ({ turnId: e.turnId }))
+  on('turn.complete', async ($, e) => ({ text: e.answer }))
   return { box, filled, toasts, forks, systems, asks, submitted }
 }
 
@@ -221,18 +223,28 @@ test('recent messages keep both sides of the last 8 exchanges, without machine t
 
 test('a project without project-context.md gets a blue Create button left of Enhance, which asks Claude to write it', async ($, on) => {
   const w = world(on, { box: 'fix the jump', noProjectContext: true })
+  const ask = 'Create project-context.md for this project with the prompt-enhancer project-context skill.'
   await start($)
   for (const surface of ['terminal', 'desktop'] as const) {
     expect(await buttons($, surface)).toEqual(['create-context', 'enhance'])
     const ui = await $.ui.mount({ plugin: 'prompt-enhancer', surface, ...BAND })
     expect(await ui.drawn({ in: 'create-context' })).toMatchObject({ type: 'Box', props: { backgroundColor: '#60A5FA' } })
     await ui.post('press', { in: 'create-context' })
+    // The button is gone at once, so a second press has nothing to land on.
+    expect(await ui.find({ key: 'create-context' })).toBeUndefined()
     await ui.unmount()
+    // One request only, and the button stays hidden until its turn ends.
+    expect(w.submitted).toEqual([ask])
+    expect(await buttons($, surface)).toEqual(['enhance'])
+    await $.turn.start({ text: 'An unrelated prompt', turnId: 'other' } as never)
+    await $.turn.complete({ turnId: 'other', answer: '', durationMs: 0, isAborted: false, reason: 'completed' } as never)
+    expect(await buttons($, surface)).toEqual(['enhance'])
+    await $.turn.start({ text: ask, turnId: 'context' } as never)
+    await $.turn.complete({ turnId: 'context', answer: '', durationMs: 0, isAborted: false, reason: 'completed' } as never)
+    // The file is still missing after that turn, so the button comes back.
+    expect(await buttons($, surface)).toEqual(['create-context', 'enhance'])
+    w.submitted.length = 0
   }
-  expect(w.submitted).toEqual([
-    'Create project-context.md for this project with the prompt-enhancer project-context skill.',
-    'Create project-context.md for this project with the prompt-enhancer project-context skill.',
-  ])
 })
 
 test('a project with project-context.md shows no Create button', async ($, on) => {

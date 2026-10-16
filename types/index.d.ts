@@ -11,6 +11,8 @@ declare module 'claude-code' {
       original: OriginalDraft
       /** Whether the project has a project-context.md; null until checked. */
       hasProjectContext: boolean | null
+      /** The pending Create project context request: 'queued', then the id of the turn running it; null when none. */
+      contextRequest: string | null
     }
   }
 }

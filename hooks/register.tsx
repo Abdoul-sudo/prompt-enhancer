@@ -5,6 +5,7 @@ const hasDraft = atom({ plugin: 'prompt-enhancer', key: 'hasDraft' } as const, n
 const isBusy = atom({ plugin: 'prompt-enhancer', key: 'isBusy' } as const, false)
 const original = atom({ plugin: 'prompt-enhancer', key: 'original' } as const, null)
 const hasProjectContext = atom({ plugin: 'prompt-enhancer', key: 'hasProjectContext' } as const, null)
+const contextRequest = atom({ plugin: 'prompt-enhancer', key: 'contextRequest' } as const, null)
 
 const MAX_MESSAGE_CHARS = 2000
 /** One exchange is the user's message and the agent's reply. */
@@ -180,6 +181,9 @@ async function refreshProjectContext($: EngineInterface): Promise<void> {
 
 /** Asks Claude to write project-context.md with the mod's skill, as a turn the user watches. */
 async function createProjectContext($: EngineInterface): Promise<void> {
+  // One request at a time: the button hides until the turn that answers it ends.
+  if ((await read($, contextRequest)) !== null) return
+  await update($, contextRequest, () => 'queued')
   await $.prompt.submit({ text: CREATE_CONTEXT_PROMPT })
 }
 
@@ -188,6 +192,7 @@ export const register: Register = on => {
 
   on('session.start', async ($, e, next) => {
     await update($, isBusy, () => false)
+    await update($, contextRequest, () => null)
     await refreshProjectContext($)
     await $.command.register({
       name: 'enhance',
@@ -221,8 +226,19 @@ export const register: Register = on => {
 
   // The orange Client button posts 'press' when clicked or when Enter reaches it.
   // A turn may have created or removed project-context.md.
+  // The queued request becomes the id of the turn that runs it.
+  on('turn.start', async ($, e, next) => {
+    if ((await read($, contextRequest)) === 'queued' && e.text.includes(CREATE_CONTEXT_PROMPT)) {
+      await update($, contextRequest, () => e.turnId)
+    }
+    return next(e)
+  })
+
   on('turn.complete', async ($, e, next) => {
-    if (e.agentId === undefined) await refreshProjectContext($).catch(() => undefined)
+    if (e.agentId === undefined) {
+      await refreshProjectContext($).catch(() => undefined)
+      if ((await read($, contextRequest)) === e.turnId) await update($, contextRequest, () => null)
+    }
     return next(e)
   })
 
@@ -242,7 +258,8 @@ export const register: Register = on => {
     const draft = await read($, hasDraft)
     const before = await read($, original)
     const canEnhance = !busy && draft !== false
-    const canCreateContext = !busy && (await read($, hasProjectContext)) === false
+    const canCreateContext =
+      !busy && (await read($, hasProjectContext)) === false && (await read($, contextRequest)) === null
     if (!busy && !canEnhance && before === null && !canCreateContext) return next(e)
     const elements = $.ui.resolve(e)
     const { Box, Button, Text } = elements
