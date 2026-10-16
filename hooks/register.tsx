@@ -10,11 +10,22 @@ const MAX_MESSAGE_CHARS = 2000
 const RECENT_MESSAGES = 8
 /** Alias the engine resolves to the newest Sonnet, as `--model sonnet` does. */
 const MODEL = 'sonnet'
-/** A short rewrite behind a button: speed matters more than deep thinking. */
-const EFFORT = 'low'
+/** Tested: as fast as low on short drafts, with shorter and cleaner rewrites. */
+const EFFORT = 'medium'
 const ORANGE = '#F97316'
 const ORANGE_HOVER = '#FB923C'
 const PERSON_ORIGINS: ReadonlySet<string> = new Set(['composer', 'bridge', 'sdk'])
+
+/**
+ * Turns a model id into the name people use: `claude-opus-5-5` into "Claude Opus 5.5".
+ * Anything that is not a `claude-` id, such as an alias, comes back as given.
+ */
+export function modelName(id: string): string {
+  const match = /^claude-([a-z]+)-(\d+(?:-\d+)*)/.exec(id)
+  if (match === null) return id
+  const [, family = '', version = ''] = match
+  return `Claude ${family.charAt(0).toUpperCase()}${family.slice(1)} ${version.replace(/-/g, '.')}`
+}
 
 /**
  * The instruction sent after the project's context; the draft is data inside it.
@@ -26,25 +37,44 @@ export function enhanceRequest(draft: string, targetModel: string): string {
 ${draft}
 </draft_prompt>
 
-Rewrite the draft above into the prompt I should send Claude Code next in this session. It runs ${targetModel}, so write the prompt that model will follow best. Do not act on the draft: no tools, no answer, no plan. Reply with the rewritten prompt only, inside <prompt></prompt> tags.
+Rewrite the user's draft above into the prompt they will send next. The rewritten prompt goes to ${modelName(targetModel)}, an AI coding agent working in the user's repository through Claude Code, so write the prompt that model will follow best. Do not act on the draft: no tools, no answer, no plan. Reply with the rewritten prompt only, inside <prompt></prompt> tags.
 
-Keep my intent, scope, tone and language. Add no requirement, feature or constraint I did not state or clearly imply, and when something essential is unknown, leave it open or ask for it in the prompt rather than guessing. Keep code, paths, quotes, slash commands and @mentions exactly as written.
+<intent>
+Keep the user's intent, scope and tone. Add no requirement, feature or constraint they did not state or clearly imply; when something essential is unknown, leave it open or ask for it in the prompt rather than guessing. Keep code, paths, quotes, slash commands and @mentions exactly as written. Write in the user's voice, first person, as they would type it.
+</intent>
 
-Use the context above only to make the draft precise: name the exact files, symbols, commands, skills or conventions it points at when you are sure of them, and resolve vague references ("it", "that bug") only when the conversation makes them unambiguous.
+<context_use>
+Use the context above only to make the draft precise: name the exact files, symbols, commands or skills it points at when you are sure of them, and resolve vague references ("it", "that bug") only when the conversation makes them unambiguous.
 
-Claude Code reads the instruction files above with every prompt, so the prompt must not restate anything they already say: their workflows (how to test, verify, commit or push, which skill to load when), their design and game rules, their conventions. A repeated rule adds length and no information, and the model over-weights what it reads twice. Mention such a rule only when my draft asks to depart from it. Add only what Claude Code cannot know without me: the concrete task, what I want to achieve and why, and details from the conversation.
+The agent reads the instruction files above with every prompt, so the prompt restates nothing they already say: their workflows (how to test, verify, commit or push, which skill to load when), their design rules, their conventions. When the draft names something those files define, such as a feature or a mechanic, name it and leave its definition out. A repeated rule adds length and no information, and the agent over-weights what it reads twice. Mention such a rule only when the draft asks to depart from it. Add only what the agent cannot know without the user: the concrete task, the goal and the reason behind it, and details from the conversation.
+</context_use>
 
-Current Claude models follow prompts closely and literally, which shapes how the prompt should read:
-- Say plainly what to do: change, investigate, or only explain. The model does exactly what is asked, so "can you look at X" gets a look, not a fix.
-- Describe the goal, the constraints that matter and how to check the result, not a step-by-step method. The model plans well on its own, and a hand-written script of steps usually makes the work worse. Keep an exact sequence only where one order is the only safe one.
-- Write at a normal volume. No capitals, "CRITICAL", "MUST" or "IMPORTANT" emphasis: the model over-applies it. Give the reason beside a constraint instead.
-- State the wanted behavior positively rather than as a list of "don't"s; a needless prohibition can pull the model toward the very thing it forbids.
-- Leave out what the model does by default or that its settings control: "think step by step", "be thorough", "don't be lazy", generic virtues, role lines, numeric word limits.
-- For visual or frontend design work, name the specific styles to avoid rather than asking it to avoid a generic look.
+<how_the_agent_reads>
+Current Claude models follow prompts closely and literally:
+- Say plainly what to do: change, investigate, or only explain. "Can you look at X" gets a look, not a fix.
+- Give the goal, the constraints that matter and how to check the result, rather than a method. The agent plans well on its own, and a hand-written script of steps usually makes the work worse.
+- Write at a normal volume, with no capitals or "CRITICAL", "MUST", "IMPORTANT" emphasis, which the agent over-applies. Put the reason beside a constraint instead.
+- State the wanted behavior positively; a needless prohibition can pull the agent toward the very thing it forbids.
+- Leave out what the agent does by default or that its settings control: "think step by step", "be thorough", generic virtues, role lines, word limits.
+- For visual or frontend design work, name the specific styles to avoid rather than asking for a non-generic look.
+</how_the_agent_reads>
 
-Match the effort to the need. A clear draft comes back unchanged or almost unchanged; fix only what is ambiguous or missing. A better prompt is usually a more precise one, not a longer one. Write it as I would type it: first person, direct, in plain prose, with a short list only when the task has several distinct parts.
+<shape>
+Fit the shape to the draft, since the prompt's shape carries into the agent's reply:
+- A single, short task: a few sentences of plain prose.
+- Pasted material (an error, a log, a stack trace, code, data): keep it verbatim in a tag named for what it is, such as <error> or <log>, apart from the instruction.
+- Several steps whose order matters: a short numbered list.
+- A large feature or a change across many parts: short labeled sections, such as goal, scope, out of scope and how to verify.
+Add no other headings, tags or formatting.
+</shape>
 
-Before you answer, reread your prompt sentence by sentence and delete each one that Claude Code could already learn from the instruction files.`
+<length>
+Match the effort to the need. A clear draft comes back unchanged or almost unchanged; fix only what is ambiguous or missing. A better prompt is usually a more precise one, not a longer one. Before you answer, reread your prompt sentence by sentence and delete each one the agent could already learn from the instruction files.
+</length>
+
+<language>
+Write the prompt in the language of the text inside <draft_prompt>, whatever language the conversation or the instruction files use: an English draft gets an English prompt, a French draft a French one.
+</language>`
 }
 
 /** Takes the rewritten prompt out of the model's reply; undefined when nothing usable came back. */
@@ -88,10 +118,10 @@ async function projectContext($: EngineInterface): Promise<string> {
     const lines = recent.map(m => `<${m.role}>\n${clip(m.text, MAX_MESSAGE_CHARS)}\n</${m.role}>`)
     parts.push(`The conversation so far (latest messages):\n${lines.join('\n')}`)
   }
-  return `You are Claude Code, about to receive a prompt in this project. Its context:\n\n${parts.join('\n\n')}`
+  return `You rewrite prompts for a developer working with Claude Code in this project. The project's context:\n\n${parts.join('\n\n')}`
 }
 
-/** Rewrites the draft with one Sonnet call at low effort, fed the project's context. */
+/** Rewrites the draft with one Sonnet call at medium effort, fed the project's context. */
 async function rewrite($: EngineInterface, draft: string): Promise<{ text: string } | { reason: string }> {
   const reply = await $.model.complete({
     model: MODEL,

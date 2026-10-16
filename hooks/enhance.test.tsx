@@ -2,7 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { enhanceRequest, extractPrompt, isSamePrompt } from './register'
+import { enhanceRequest, extractPrompt, isSamePrompt, modelName } from './register'
 
 const VOID = { value: undefined } as never
 const ok = (value: unknown) => ({ value }) as never
@@ -86,7 +86,11 @@ test('helpers: the reply is read from its tags, whitespace-only rewrites count a
   expect(isSamePrompt('fix  the\nbug', 'fix the bug ')).toBe(true)
   expect(isSamePrompt('fix the bug', 'Fix the jump bug')).toBe(false)
   expect(enhanceRequest('fix it', 'claude-opus-5-5')).toContain('<draft_prompt>\nfix it\n</draft_prompt>')
-  expect(enhanceRequest('fix it', 'claude-opus-5-5')).toContain('It runs claude-opus-5-5')
+  expect(enhanceRequest('fix it', 'claude-opus-5-5')).toContain('goes to Claude Opus 5.5, an AI coding agent')
+  expect(modelName('claude-opus-5-5')).toBe('Claude Opus 5.5')
+  expect(modelName('claude-sonnet-5')).toBe('Claude Sonnet 5')
+  expect(modelName('claude-fable-5-1[1m]')).toBe('Claude Fable 5.1')
+  expect(modelName('opus')).toBe('opus')
 })
 
 test('Enhance replaces the draft without sending it, and Restore brings the original back', async ($, on) => {
@@ -129,12 +133,12 @@ test('edits made while enhancing are never overwritten', async ($, on) => {
   expect(w.box.text).toBe('fix it now')
 })
 
-test('one Sonnet call at low effort carries the project files, skills, tools and recent conversation', async ($, on) => {
+test('one Sonnet call at medium effort carries the project files, skills, tools and recent conversation', async ($, on) => {
   const w = world(on, { box: 'check level 3', reply: '<prompt>Check level 3 with the verify-game skill.</prompt>' })
   await start($)
   await press($, 'terminal', 'enhance')
-  expect(w.asks).toEqual([{ model: 'sonnet', effort: 'low' }])
-  expect(w.forks[0]).toContain('It runs claude-opus-5-5')
+  expect(w.asks).toEqual([{ model: 'sonnet', effort: 'medium' }])
+  expect(w.forks[0]).toContain('goes to Claude Opus 5.5')
   expect(w.systems[0]).toContain('Global rule: answer briefly.')
   expect(w.systems[0]).toContain('Project rule: typed GDScript.')
   expect(w.systems[0]).toContain('- verify-game: Check levels in the real engine')
