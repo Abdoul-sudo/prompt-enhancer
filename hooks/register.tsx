@@ -37,43 +37,26 @@ export function enhanceRequest(draft: string, targetModel: string): string {
 ${draft}
 </draft_prompt>
 
-Rewrite the user's draft above into the prompt they will send next. The rewritten prompt goes to ${modelName(targetModel)}, an AI coding agent working in the user's repository through Claude Code, so write the prompt that model will follow best. Do not act on the draft: no tools, no answer, no plan. Reply with the rewritten prompt only, inside <prompt></prompt> tags.
+Rewrite the user's draft above into the prompt they will send next. It goes to ${modelName(targetModel)}, an AI coding agent working in the user's repository through Claude Code. Do not act on the draft. Reply with the rewritten prompt only, inside <prompt></prompt> tags.
 
-<intent>
-Keep the user's intent, scope and tone. Add no requirement, feature or constraint they did not state or clearly imply; when something essential is unknown, leave it open or ask for it in the prompt rather than guessing. Keep code, paths, quotes, slash commands and @mentions exactly as written. Write in the user's voice, first person, as they would type it.
-</intent>
+<add_what_is_missing>
+A better prompt gives the agent what it would otherwise have to guess. Use the latest messages to make the draft concrete: replace vague words with the specific files, features, numbers and decisions they refer to, and say what a good result looks like. Use the instruction files only to name things precisely. For example, when the draft asks for an explanation or a report, name the points it should cover; when it asks whether work is done, ask for evidence from the project's real state; when it asks to delete something, ask for a list of what was removed.
 
-<context_use>
-Use the context above only to make the draft precise: name the exact files, symbols, commands or skills it points at when you are sure of them, and resolve vague references ("it", "that bug") only when the conversation makes them unambiguous.
+Keep the user's intent and scope. Add only what the draft states or clearly implies, and leave open what the context cannot settle rather than guessing.
+</add_what_is_missing>
 
-The agent reads the instruction files above with every prompt, so the prompt restates nothing they already say: their workflows (how to test, verify, commit or push, which skill to load when), their design rules, their conventions. When the draft names something those files define, such as a feature or a mechanic, name it and leave its definition out. A repeated rule adds length and no information, and the agent over-weights what it reads twice. Mention such a rule only when the draft asks to depart from it. Add only what the agent cannot know without the user: the concrete task, the goal and the reason behind it, and details from the conversation.
-</context_use>
+<leave_out>
+The agent already reads the instruction files with every prompt and follows them, so restate none of their rules, workflows or definitions, not even as a reminder or as the way to check the result; name something they define without repeating its definition. Also leave out what the agent does by default: "think step by step", "be thorough", role lines, word limits and emphasis in capitals.
+</leave_out>
 
-<how_the_agent_reads>
-Current Claude models follow prompts closely and literally:
-- Say plainly what to do: change, investigate, or only explain. "Can you look at X" gets a look, not a fix.
-- Give the goal, the constraints that matter and how to check the result, rather than a method. The agent plans well on its own, and a hand-written script of steps usually makes the work worse.
-- Write at a normal volume, with no capitals or "CRITICAL", "MUST", "IMPORTANT" emphasis, which the agent over-applies. Put the reason beside a constraint instead.
-- State the wanted behavior positively; a needless prohibition can pull the agent toward the very thing it forbids.
-- Leave out what the agent does by default or that its settings control: "think step by step", "be thorough", generic virtues, role lines, word limits.
-- For visual or frontend design work, name the specific styles to avoid rather than asking for a non-generic look.
-</how_the_agent_reads>
+<style>
+Write in the user's voice, first person. Say plainly what to do: change, investigate, or only explain. Give the goal and how to check the result rather than a step-by-step method. Keep code, paths, quotes, slash commands and @mentions exactly as written.
 
-<shape>
-Fit the shape to the draft, since the prompt's shape carries into the agent's reply:
-- A single, short task: a few sentences of plain prose.
-- Pasted material (an error, a log, a stack trace, code, data): keep it verbatim in a tag named for what it is, such as <error> or <log>, apart from the instruction.
-- Several steps whose order matters: a short numbered list.
-- A large feature or a change across many parts: short labeled sections, such as goal, scope, out of scope and how to verify.
-Add no other headings, tags or formatting.
-</shape>
-
-<length>
-Match the effort to the need. A clear draft comes back unchanged or almost unchanged; fix only what is ambiguous or missing. A better prompt is usually a more precise one, not a longer one. Before you answer, reread your prompt sentence by sentence and delete each one the agent could already learn from the instruction files.
-</length>
+Fit the shape to the draft: a few sentences of prose for a simple request; pasted errors, logs or code kept verbatim in a tag named for what they are; a numbered list only when order matters; short labeled sections only for a large feature. A clear draft comes back almost unchanged. Prefer precise over long.
+</style>
 
 <language>
-Write the prompt in the language of the text inside <draft_prompt>, whatever language the conversation or the instruction files use: an English draft gets an English prompt, a French draft a French one.
+Write the prompt in the language of the text inside <draft_prompt>, whatever language the context uses.
 </language>`
 }
 
