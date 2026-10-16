@@ -18,6 +18,14 @@ In a Claude Code terminal session, run:
 
 Answer `y` to add the marketplace, then pick the user scope. The mod then loads in every session, the desktop app's Code tab included.
 
+### Better results: add a context.md (optional)
+
+The mod reads a `context.md` file at the root of your project when one exists. To create it, send this prompt to Claude Code in your project:
+
+```
+Create a context.md file at the root of this project. The prompt-enhancer mod reads it to understand the project. Describe what the project is, its main features and parts, the key files and folders with one line each, and the names we use for things. Describe the project; do not repeat the rules from CLAUDE.md. Keep it short, and update it when the project changes.
+```
+
 ## Model
 
 | Setting | Value | Why |
