@@ -83,10 +83,6 @@ claude plugin update prompt-enhancer@prompt-enhancer
 
 Then start a new session.
 
-### How new versions are detected
-
-`plugin.json` has no `version` field on purpose: every commit pushed to `main` is a new version, so updates reach you without a release step.
-
 ## Files
 
 | Path | What it holds |
