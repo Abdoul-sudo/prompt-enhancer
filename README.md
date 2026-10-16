@@ -20,7 +20,7 @@ Answer `y` to add the marketplace, then pick the user scope. The mod then loads 
 
 ### Better results: project-context.md
 
-The mod gives better rewrites when your project has a `project-context.md` file: a short description of the project, its main parts, its key files and the names you use. The mod reads up to 20,000 characters of it.
+The mod gives better rewrites when your project has a `project-context.md` file: a short description of the project, its main parts, its key files and the names you use. The file goes in the folder where you start Claude Code. The mod reads up to 20,000 characters of it.
 
 - **Create it:** when the file is missing, a blue **Create project context** button shows to the left of **Enhance prompt**. Click it once: Claude writes the file with the mod's `project-context` skill.
 - **Keep it current:** Claude uses the same skill on its own to update the file after changes that add, remove or rename features, parts or key files. It never creates the file on its own. You can also run `/prompt-enhancer:project-context` at any time.
