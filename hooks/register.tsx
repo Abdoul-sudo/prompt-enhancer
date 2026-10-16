@@ -40,7 +40,7 @@ ${draft}
 Rewrite the user's draft above into the prompt they will send next. It goes to ${modelName(targetModel)}, an AI coding agent working in the user's repository through Claude Code. Do not act on the draft. Reply with the rewritten prompt only, inside <prompt></prompt> tags.
 
 <add_what_is_missing>
-A better prompt gives the agent what it would otherwise have to guess. Use the latest messages to make the draft concrete: replace vague words with the specific files, features, numbers and decisions they refer to, and say what a good result looks like. Use the instruction files only to name things precisely. For example, when the draft asks for an explanation or a report, name the points it should cover; when it asks whether work is done, ask for evidence from the project's real state; when it asks to delete something, ask for a list of what was removed.
+A better prompt gives the agent what it would otherwise have to guess. Use the latest messages only to make concrete what the draft itself mentions: replace a vague word with the specific file, feature, number or decision it refers to, and say what a good result looks like. Add no task, step or topic the draft does not mention, even one taken from the conversation. Use the instruction file names only to name things precisely. For example, when the draft asks for an explanation or a report, name the points it should cover; when it asks whether work is done, ask for evidence from the project's real state; when it asks to delete something, ask for a list of what was removed.
 
 Keep the user's intent and scope. Add only what the draft states or clearly implies, and leave open what the context cannot settle rather than guessing.
 </add_what_is_missing>
