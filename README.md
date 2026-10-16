@@ -4,6 +4,8 @@ A Claude Code mod that turns a vague prompt into a clear one, using the project 
 
 Type a prompt, click the orange **Enhance prompt** button above the prompt box, review the result, then send it yourself. **Restore original** puts your text back.
 
+From the keyboard, type `/enhance <prompt>` to do the same.
+
 ![A vague draft, then the same draft after one click on Enhance prompt](docs/before-after.png)
 
 ## Install
@@ -15,16 +17,6 @@ In a Claude Code terminal session, run:
 ```
 
 Answer `y` to add the marketplace, then pick the user scope. The mod then loads in every session, the desktop app's Code tab included.
-
-## How it works
-
-- Reads the draft in your prompt box. Nothing is sent.
-- Makes one model call. It sends the text in your prompt box together with the section titles and file names from your `CLAUDE.md` files (not their rules, which Claude already reads), your skills and commands, the tool names and the last few messages of the conversation.
-- Uses the conversation only to make clearer what your draft mentions. It adds no task you did not ask for.
-- Writes the prompt for the model your session uses (for example Claude Opus 5.5), following Anthropic's prompting advice for current Claude models.
-- Adds structure only when the draft needs it: pasted errors or logs go in their own tag, ordered steps become a numbered list, a large feature gets short sections. A short task stays a few plain sentences.
-- Puts the rewrite in the prompt box. Every press improves the prompt, even a clear one.
-- `/enhance <prompt>` does the same from the keyboard.
 
 ## Model
 
