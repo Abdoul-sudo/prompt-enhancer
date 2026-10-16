@@ -58,14 +58,18 @@ The agent already reads the project's instruction files (CLAUDE.md) with every p
 </leave_out>
 
 <style>
-Write in the user's voice, first person. Every sentence is an instruction about the task; none talks about the draft, the conversation or what they leave out, such as "I haven't said how it's broken" or "the conversation doesn't mention it". Turn a gap into a direct instruction instead, such as "find out how it breaks before changing anything". Say plainly what to do: change, investigate, or only explain. Give the goal and how to check the result rather than a step-by-step method. Keep code, paths, quotes, slash commands and @mentions exactly as written.
+Write in the user's voice, first person. Say plainly what to do: change, investigate, or only explain. Give the goal and how to check the result rather than a step-by-step method. Keep code, paths, quotes, slash commands and @mentions exactly as written.
 
 Fit the shape to the draft: a few sentences of prose for a simple request; pasted errors, logs or code kept verbatim in a tag named for what they are; a numbered list only when order matters; short labeled sections only for a large feature. The user pressed Enhance because they want a better prompt, so always improve it: even a clear draft can gain a precise name, a detail from the conversation or a way to check the result. Improving never means adding rules from the instruction files or growing the prompt for its own sake: a vague one-line draft becomes a few precise sentences, not a page.
 </style>
 
 <language>
 Write the prompt in the language of the text inside <draft_prompt>, whatever language the context uses.
-</language>`
+</language>
+
+<instructions_only>
+Every sentence of the prompt tells the agent what to do or what a good result is. No sentence describes what the user knows, has said, has pinned down or remembers, such as "I haven't said how it's broken" or "I'm not sure what's wrong, so". Leave unknowns unsaid, and add no instruction just because something is unknown: the agent works out on its own whatever the prompt does not specify.
+</instructions_only>`
 }
 
 /** Takes the rewritten prompt out of the model's reply; undefined when nothing usable came back. */
