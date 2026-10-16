@@ -5,7 +5,7 @@ const hasDraft = atom({ plugin: 'prompt-enhancer', key: 'hasDraft' } as const, n
 const isBusy = atom({ plugin: 'prompt-enhancer', key: 'isBusy' } as const, false)
 const original = atom({ plugin: 'prompt-enhancer', key: 'original' } as const, null)
 
-const MAX_FILE_CHARS = 20000
+const MAX_NAMES = 150
 const MAX_MESSAGE_CHARS = 2000
 const RECENT_MESSAGES = 8
 /** Alias the engine resolves to the newest Sonnet, as `--model sonnet` does. */
@@ -67,24 +67,40 @@ export function extractPrompt(reply: string): string | undefined {
   return text === '' ? undefined : text
 }
 
-function clip(text: string, max = MAX_FILE_CHARS): string {
+function clip(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max)}\n[...cut]` : text
 }
 
-/** The project's context, read live: instruction files, skills, tools and the end of the conversation. */
+/**
+ * What an instruction file names, without its rules: its section titles and the
+ * code-formatted names it uses (paths, commands, identifiers). The rewriter can
+ * then name things precisely but has no rule text to copy into the prompt.
+ */
+export function instructionNames(path: string, text: string): string {
+  const sections = [...text.matchAll(/^#{1,6}\s+(.+)$/gm)].map(m => (m[1] ?? '').trim())
+  const names = [...new Set([...text.matchAll(/`([^`\n]{2,80})`/g)].map(m => m[1] ?? ''))].slice(0, MAX_NAMES)
+  if (sections.length === 0 && names.length === 0) return ''
+  return `<instruction_file path="${path}">\nSections: ${sections.join('; ')}\nNames: ${names.map(n => `\`${n}\``).join(', ')}\n</instruction_file>`
+}
+
+/** The project's context, read live: instruction file names, skills, tools and the end of the conversation. */
 async function projectContext($: EngineInterface): Promise<string> {
   const parts: string[] = [
     `Working directory: ${await $.session.cwd()}`,
-    'The instruction files below are loaded by Claude Code with every prompt. They are here so you know what not to repeat.',
+    'Claude Code loads the instruction files below with every prompt and the agent follows them. You see only their section titles and the names they use, so you can name things precisely.',
   ]
   const home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))
   if (home !== undefined) {
     const path = `${home}/.claude/CLAUDE.md`
     const text = await $.fs.read(path).catch(() => '')
-    if (text.trim() !== '') parts.push(`<instructions path="${path}">\n${clip(text)}\n</instructions>`)
+    const summary = instructionNames(path, text)
+    if (summary !== '') parts.push(summary)
   }
   const files = await $.fs.ancestors({ names: ['CLAUDE.md', '.claude/CLAUDE.md', 'CLAUDE.local.md'] }).catch(() => [])
-  for (const f of files) parts.push(`<instructions path="${f.dir}/${f.name}">\n${clip(f.content)}\n</instructions>`)
+  for (const f of files) {
+    const summary = instructionNames(`${f.dir}/${f.name}`, f.content)
+    if (summary !== '') parts.push(summary)
+  }
   const commands = (await $.command.list().catch(() => [])).filter(c => c.source !== 'builtin')
   if (commands.length > 0) parts.push(`Skills and commands:\n${commands.map(c => `- ${c.name}: ${c.description}`).join('\n')}`)
   const tools = await $.tool.list().catch(() => [])

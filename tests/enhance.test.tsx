@@ -37,8 +37,8 @@ function world(on: On, opts: Opts = {}) {
   )
   on('session.model', async () => ok('claude-opus-5-5'))
   on('session.cwd', async () => ok('/repo'))
-  on('fs.read', async ($, e) => (e.path.replace(/\\/g, '/').includes('/home/u/.claude/CLAUDE.md') ? ok('Global rule: answer briefly.') : ok('')))
-  on('fs.ancestors', async () => ok([{ dir: '/repo', name: 'CLAUDE.md', content: 'Project rule: typed GDScript.', parts: [] }]))
+  on('fs.read', async ($, e) => (e.path.replace(/\\/g, '/').includes('/home/u/.claude/CLAUDE.md') ? ok('# Commits\nCommit with `git commit` and a short message.') : ok('')))
+  on('fs.ancestors', async () => ok([{ dir: '/repo', name: 'CLAUDE.md', content: '# Code\nTyped GDScript, entry scene `refonte/main.tscn`.', parts: [] }]))
   on('command.list', async () => ok([{ name: 'verify-game', description: 'Check levels in the real engine', source: 'user' }]))
   on('tool.list', async () => ok([{ name: 'Bash', description: 'Shell', mcp: false }]))
   on('prompt.read', async () => {
@@ -131,15 +131,17 @@ test('edits made while enhancing are never overwritten', async ($, on) => {
   expect(w.box.text).toBe('fix it now')
 })
 
-test('one Sonnet call at medium effort carries the project files, skills, tools and recent conversation', async ($, on) => {
+test('one Sonnet call at medium effort carries the instruction files names, skills, tools and recent conversation', async ($, on) => {
   const w = world(on, { box: 'check level 3', reply: '<prompt>Check level 3 with the verify-game skill.</prompt>' })
   await start($)
   await press($, 'terminal', 'enhance')
   expect(w.asks).toEqual([{ model: 'sonnet', effort: 'medium' }])
   expect(w.forks[0]).toContain('goes to Claude Opus 5.5')
   expect(w.systems[0]).toMatch(/^You are a prompt enhancer\./)
-  expect(w.systems[0]).toContain('Global rule: answer briefly.')
-  expect(w.systems[0]).toContain('Project rule: typed GDScript.')
+  expect(w.systems[0]).toContain('Sections: Commits\nNames: `git commit`')
+  expect(w.systems[0]).toContain('Sections: Code\nNames: `refonte/main.tscn`')
+  expect(w.systems[0]).not.toContain('short message')
+  expect(w.systems[0]).not.toContain('Typed GDScript')
   expect(w.systems[0]).toContain('- verify-game: Check levels in the real engine')
   expect(w.systems[0]).toContain('Tools: Bash')
   expect(w.systems[0]).toContain('<user>\nthe robot lands one cell short\n</user>')
