@@ -2,7 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { enhanceRequest, extractPrompt, isSamePrompt, modelName } from './register'
+import { enhanceRequest, extractPrompt, isSamePrompt, modelName } from '../hooks/register'
 
 const VOID = { value: undefined } as never
 const ok = (value: unknown) => ({ value }) as never

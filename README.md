@@ -45,3 +45,49 @@ Each click uses your Claude Code account, like any other request.
    - `EFFORT`: `low`, `medium`, `high`, `xhigh` or `max`. Higher is slower and costs more.
 
 2. Start a new session, or run `/reload-plugins` in a terminal session.
+
+An update replaces the installed files, so edits made there are lost when you update. To keep your own settings, fork the repository and install from your fork.
+
+## Update
+
+Claude Code does not update this mod on its own by default: background auto-update is off for every marketplace you add yourself, and a marketplace cannot turn it on for you.
+
+### Turn on automatic updates (recommended)
+
+Do this once:
+
+1. In a Claude Code terminal session, run `/plugin`.
+2. Open **Marketplaces** and select `prompt-enhancer`.
+3. Select **Enable auto-update**.
+
+Claude Code then checks for a new version in the background after a session starts. A new version applies from the next session.
+
+### Update by hand
+
+In your shell:
+
+```
+claude plugin marketplace update prompt-enhancer
+claude plugin update prompt-enhancer@prompt-enhancer
+```
+
+Then start a new session.
+
+### How new versions are detected
+
+`plugin.json` has no `version` field on purpose: every commit pushed to `main` is a new version, so updates reach you without a release step.
+
+## Files
+
+| Path | What it holds |
+| --- | --- |
+| `.claude-plugin/plugin.json` | The mod's manifest. |
+| `.claude-plugin/marketplace.json` | Makes this repository its own marketplace, so it installs with one line. |
+| `hooks/register.tsx` | The mod: the button, the rewrite instructions and the model call. |
+| `hooks/orange_button.tsx` | The orange button, drawn as its own region so the desktop app keeps its color. |
+| `types/index.d.ts` | The types of the values the mod keeps for the session. |
+| `tests/enhance.test.tsx` | Tests, run with `claude plugin test .` |
+
+## License
+
+[MIT](LICENSE)
