@@ -30,7 +30,9 @@ Rewrite the draft above into the prompt I should send Claude Code next in this s
 
 Keep my intent, scope, tone and language. Add no requirement, feature or constraint I did not state or clearly imply, and when something essential is unknown, leave it open or ask for it in the prompt rather than guessing. Keep code, paths, quotes, slash commands and @mentions exactly as written.
 
-Use the context above only to make the draft precise: name the exact files, symbols, commands, skills or conventions it points at when you are sure of them, and resolve vague references ("it", "that bug") only when the conversation makes them unambiguous. Claude Code already loads the project instructions, memory, skills and tools, so leave those out of the prompt; add only context it cannot know, such as what I am trying to achieve and why.
+Use the context above only to make the draft precise: name the exact files, symbols, commands, skills or conventions it points at when you are sure of them, and resolve vague references ("it", "that bug") only when the conversation makes them unambiguous.
+
+Claude Code reads the instruction files above with every prompt, so the prompt must not restate anything they already say: their workflows (how to test, verify, commit or push, which skill to load when), their design and game rules, their conventions. A repeated rule adds length and no information, and the model over-weights what it reads twice. Mention such a rule only when my draft asks to depart from it. Add only what Claude Code cannot know without me: the concrete task, what I want to achieve and why, and details from the conversation.
 
 Current Claude models follow prompts closely and literally, which shapes how the prompt should read:
 - Say plainly what to do: change, investigate, or only explain. The model does exactly what is asked, so "can you look at X" gets a look, not a fix.
@@ -40,7 +42,9 @@ Current Claude models follow prompts closely and literally, which shapes how the
 - Leave out what the model does by default or that its settings control: "think step by step", "be thorough", "don't be lazy", generic virtues, role lines, numeric word limits.
 - For visual or frontend design work, name the specific styles to avoid rather than asking it to avoid a generic look.
 
-Match the effort to the need. A clear draft comes back unchanged or almost unchanged; fix only what is ambiguous or missing. A better prompt is usually a more precise one, not a longer one. Write it as I would type it: first person, direct, in plain prose, with a short list only when the task has several distinct parts.`
+Match the effort to the need. A clear draft comes back unchanged or almost unchanged; fix only what is ambiguous or missing. A better prompt is usually a more precise one, not a longer one. Write it as I would type it: first person, direct, in plain prose, with a short list only when the task has several distinct parts.
+
+Before you answer, reread your prompt sentence by sentence and delete each one that Claude Code could already learn from the instruction files.`
 }
 
 /** Takes the rewritten prompt out of the model's reply; undefined when nothing usable came back. */
@@ -62,7 +66,10 @@ function clip(text: string, max = MAX_FILE_CHARS): string {
 
 /** The project's context, read live: instruction files, skills, tools and the end of the conversation. */
 async function projectContext($: EngineInterface): Promise<string> {
-  const parts: string[] = [`Working directory: ${await $.session.cwd()}`]
+  const parts: string[] = [
+    `Working directory: ${await $.session.cwd()}`,
+    'The instruction files below are loaded by Claude Code with every prompt. They are here so you know what not to repeat.',
+  ]
   const home = (await $.env.get('USERPROFILE')) ?? (await $.env.get('HOME'))
   if (home !== undefined) {
     const path = `${home}/.claude/CLAUDE.md`
