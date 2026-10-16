@@ -6,7 +6,7 @@ Type a prompt, click the orange **Enhance prompt** button above the prompt box, 
 
 From the keyboard, type `/enhance <prompt>` to do the same.
 
-![A vague draft, then the same draft after one click on Enhance prompt](docs/before-after.png)
+![Typing a vague draft, then one click on Enhance prompt](docs/demo.gif)
 
 ## Install
 
@@ -96,7 +96,7 @@ Then start a new session.
 | `skills/project-context/SKILL.md` | The skill that creates and updates `project-context.md`. |
 | `types/index.d.ts` | The types of the values the mod keeps for the session. |
 | `tests/enhance.test.tsx` | Tests, run with `claude plugin test .` |
-| `docs/before-after.png` | The before and after example image. |
+| `docs/demo.gif` | The demo animation. |
 | `docs/create-project-context.png` | The Create project context button image. |
 
 ## License
