@@ -18,13 +18,12 @@ In a Claude Code terminal session, run:
 
 Answer `y` to add the marketplace, then pick the user scope. The mod then loads in every session, the desktop app's Code tab included.
 
-### Better results: add a context.md (optional)
+### Better results: project-context.md
 
-The mod reads a `context.md` file at the root of your project when one exists. To create it, send this prompt to Claude Code in your project:
+The mod gives better rewrites when your project has a `project-context.md` file: a short description of the project, its main parts, its key files and the names you use. The mod reads up to 20,000 characters of it.
 
-```
-Create a context.md file at the root of this project. The prompt-enhancer mod reads it to understand the project. Describe what the project is, its main features and parts, the key files and folders with one line each, and the names we use for things. Describe the project; do not repeat the rules from CLAUDE.md. Keep it short, and update it when the project changes.
-```
+- **Create it:** when the file is missing, a blue **Create project context** button shows to the left of **Enhance prompt**. Click it once: Claude writes the file with the mod's `project-context` skill.
+- **Keep it current:** Claude uses the same skill on its own after changes that add, remove or rename features, parts or key files. You can also run `/prompt-enhancer:project-context` at any time.
 
 ## Model
 
@@ -87,7 +86,8 @@ Then start a new session.
 | `.claude-plugin/plugin.json` | The mod's manifest. |
 | `.claude-plugin/marketplace.json` | Makes this repository its own marketplace, so it installs with one line. |
 | `hooks/register.tsx` | The mod: the button, the rewrite instructions and the model call. |
-| `hooks/orange_button.tsx` | The orange button, drawn as its own region so the desktop app keeps its color. |
+| `hooks/color_button.tsx` | The colored buttons, drawn as their own region so the desktop app keeps their color. |
+| `skills/project-context/SKILL.md` | The skill that creates and updates `project-context.md`. |
 | `types/index.d.ts` | The types of the values the mod keeps for the session. |
 | `tests/enhance.test.tsx` | Tests, run with `claude plugin test .` |
 | `docs/before-after.png` | The example image above. |
