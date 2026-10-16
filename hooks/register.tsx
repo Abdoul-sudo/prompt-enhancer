@@ -96,9 +96,10 @@ export function recentMessages<M extends { role: string; text: string }>(message
 async function projectContext($: EngineInterface): Promise<string> {
   const parts: string[] = [`Working directory: ${await $.session.cwd()}`]
   // project-context.md describes the project itself (what it is, its parts, its files), so it is sent whole.
-  const contextFiles = await $.fs.ancestors({ names: [PROJECT_CONTEXT_FILE] }).catch(() => [])
-  for (const f of contextFiles) {
-    parts.push(`<project_context path="${f.dir}/${f.name}">\n${clip(f.content, MAX_CONTEXT_FILE_CHARS)}\n</project_context>`)
+  const contextPath = await projectContextPath($)
+  const contextText = await $.fs.read(contextPath).catch(() => '')
+  if (contextText.trim() !== '') {
+    parts.push(`<project_context path="${contextPath}">\n${clip(contextText, MAX_CONTEXT_FILE_CHARS)}\n</project_context>`)
   }
   const messages = await $.session.messages().catch(() => [])
   const recent = recentMessages(Array.isArray(messages) ? messages : [])
@@ -163,10 +164,18 @@ async function restore($: EngineInterface): Promise<void> {
   await update($, original, () => null)
 }
 
+/**
+ * Where the project's project-context.md lives: the folder the session started in,
+ * never a parent folder, so a file from another project is never read.
+ */
+async function projectContextPath($: EngineInterface): Promise<string> {
+  return `${await $.session.root()}/${PROJECT_CONTEXT_FILE}`
+}
+
 /** Whether the project has a project-context.md, so the band offers to create one only when it is missing. */
 async function refreshProjectContext($: EngineInterface): Promise<void> {
-  const found = await $.fs.ancestors({ names: [PROJECT_CONTEXT_FILE] }).catch(() => [])
-  await update($, hasProjectContext, () => found.length > 0)
+  const exists = await $.fs.exists(await projectContextPath($)).catch(() => false)
+  await update($, hasProjectContext, () => exists)
 }
 
 /** Asks Claude to write project-context.md with the mod's skill, as a turn the user watches. */

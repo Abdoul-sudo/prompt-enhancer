@@ -37,12 +37,24 @@ function world(on: On, opts: Opts = {}) {
     ]),
   )
   on('session.model', async () => ok('claude-opus-5-5'))
-  on('session.cwd', async () => ok('/repo'))
-  on('fs.read', async ($, e) => (e.path.replace(/\\/g, '/').includes('/home/u/.claude/CLAUDE.md') ? ok('# Commits\nCommit with `git commit` and a short message.') : ok('')))
-  on('fs.ancestors', async ($, e) =>
-    e.names.includes('project-context.md')
-      ? ok(opts.noProjectContext ? [] : [{ dir: '/repo', name: 'project-context.md', content: 'A puzzle game where the player programs a robot.', parts: [] }])
-      : ok([{ dir: '/repo', name: 'CLAUDE.md', content: '# Code\nTyped GDScript, entry scene `refonte/main.tscn`.', parts: [] }]),
+  on('session.cwd', async () => ok('/repo/sub'))
+  on('session.root', async () => ok('/repo'))
+  // Files on disk: the project's own context file (unless the case has none), a context
+  // file from a parent folder that must never be read, and a CLAUDE.md that must not be sent.
+  const files: Record<string, string> = {
+    '/home/u/.claude/CLAUDE.md': '# Commits\nCommit with `git commit` and a short message.',
+    '/repo/CLAUDE.md': '# Code\nTyped GDScript, entry scene `refonte/main.tscn`.',
+    '/project-context.md': 'Another project in a parent folder.',
+    ...(opts.noProjectContext ? {} : { '/repo/project-context.md': 'A puzzle game where the player programs a robot.' }),
+  }
+  const posix = (path: string) => path.replace(/\\/g, '/').replace(/^[A-Za-z]:/, '')
+  on('fs.read', async ($, e) => ok(files[posix(e.path)] ?? ''))
+  on('fs.exists', async ($, e) => ok(posix(e.path) in files))
+  on('fs.ancestors', async () =>
+    ok([
+      { dir: '/', name: 'project-context.md', content: files['/project-context.md'], parts: [] },
+      { dir: '/repo', name: 'CLAUDE.md', content: files['/repo/CLAUDE.md'], parts: [] },
+    ]),
   )
   on('command.list', async () => ok([{ name: 'verify-game', description: 'Check levels in the real engine', source: 'user' }]))
   on('tool.list', async () => ok([{ name: 'Bash', description: 'Shell', mcp: false }]))
@@ -148,7 +160,7 @@ test('one Sonnet call at medium effort carries project-context.md and the recent
   expect(w.forks[0]).toContain('goes to Claude Opus 5.5')
   expect(w.systems[0]).toMatch(/^You are a prompt enhancer\./)
   expect(w.systems[0]).toContain('<project_context path="/repo/project-context.md">\nA puzzle game where the player programs a robot.\n</project_context>')
-  for (const left of ['git commit', 'refonte/main.tscn', 'Typed GDScript', 'verify-game', 'Tools: Bash']) {
+  for (const left of ['git commit', 'refonte/main.tscn', 'Typed GDScript', 'verify-game', 'Tools: Bash', 'Another project']) {
     expect(w.systems[0]).not.toContain(left)
   }
   expect(w.systems[0]).toContain('<user>\nthe robot lands one cell short\n</user>')
@@ -227,4 +239,10 @@ test('a project with project-context.md shows no Create button', async ($, on) =
   world(on, { box: 'fix the jump' })
   await start($)
   expect(await buttons($, 'terminal')).toEqual(['enhance'])
+})
+
+test('a project-context.md in a parent folder does not hide the Create button', async ($, on) => {
+  world(on, { box: 'fix the jump', noProjectContext: true })
+  await start($)
+  expect(await buttons($, 'terminal')).toEqual(['create-context', 'enhance'])
 })
