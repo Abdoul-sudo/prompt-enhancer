@@ -52,7 +52,7 @@ The agent already reads the instruction files with every prompt and follows them
 <style>
 Write in the user's voice, first person. Say plainly what to do: change, investigate, or only explain. Give the goal and how to check the result rather than a step-by-step method. Keep code, paths, quotes, slash commands and @mentions exactly as written.
 
-Fit the shape to the draft: a few sentences of prose for a simple request; pasted errors, logs or code kept verbatim in a tag named for what they are; a numbered list only when order matters; short labeled sections only for a large feature. A clear draft comes back almost unchanged. Prefer precise over long.
+Fit the shape to the draft: a few sentences of prose for a simple request; pasted errors, logs or code kept verbatim in a tag named for what they are; a numbered list only when order matters; short labeled sections only for a large feature. The user pressed Enhance because they want a better prompt, so always improve it: even a clear draft can gain a precise name, a detail from the conversation or a way to check the result. Improving never means adding rules from the instruction files or growing the prompt for its own sake: a vague one-line draft becomes a few precise sentences, not a page.
 </style>
 
 <language>
@@ -65,12 +65,6 @@ export function extractPrompt(reply: string): string | undefined {
   const tagged = [...reply.matchAll(/<prompt>([\s\S]*?)<\/prompt>/g)].at(-1)?.[1]
   const text = (tagged ?? reply).trim()
   return text === '' ? undefined : text
-}
-
-/** True when the rewrite only moved whitespace around. */
-export function isSamePrompt(a: string, b: string): boolean {
-  const flat = (s: string) => s.replace(/\s+/g, ' ').trim()
-  return flat(a) === flat(b)
 }
 
 function clip(text: string, max = MAX_FILE_CHARS): string {
@@ -101,7 +95,7 @@ async function projectContext($: EngineInterface): Promise<string> {
     const lines = recent.map(m => `<${m.role}>\n${clip(m.text, MAX_MESSAGE_CHARS)}\n</${m.role}>`)
     parts.push(`The conversation so far (latest messages):\n${lines.join('\n')}`)
   }
-  return `You rewrite prompts for a developer working with Claude Code in this project. The project's context:\n\n${parts.join('\n\n')}`
+  return `You are a prompt enhancer. You turn a developer's draft into the instruction they send to their AI coding agent in this project. Your whole reply is that instruction, written as the developer would send it: no explanation, commentary or answer of your own. The project's context:\n\n${parts.join('\n\n')}`
 }
 
 /** Rewrites the draft with one Sonnet call at medium effort, fed the project's context. */
@@ -131,7 +125,6 @@ async function enhance($: EngineInterface, draft?: string): Promise<string> {
   try {
     const result = await rewrite($, source)
     if ('reason' in result) return `Could not enhance the prompt (${result.reason}).`
-    if (isSamePrompt(result.text, source)) return 'The prompt is already clear.'
     const box = await $.prompt.read()
     const isOverwritingEdits = draft === undefined ? box.text !== source : box.text.trim() !== ''
     if (isOverwritingEdits) return 'The prompt box changed while enhancing. Your text was kept.'

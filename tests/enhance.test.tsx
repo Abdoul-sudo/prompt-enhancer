@@ -2,7 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { enhanceRequest, extractPrompt, isSamePrompt, modelName } from '../hooks/register'
+import { enhanceRequest, extractPrompt, modelName } from '../hooks/register'
 
 const VOID = { value: undefined } as never
 const ok = (value: unknown) => ({ value }) as never
@@ -79,12 +79,10 @@ async function press($: Engine, surface: 'terminal' | 'desktop', key: string) {
   await ui.unmount()
 }
 
-test('helpers: the reply is read from its tags, whitespace-only rewrites count as unchanged', () => {
+test('helpers: the reply is read from its tags, the request names the target model', () => {
   expect(extractPrompt('Sure.\n<prompt>\nFix the jump in refonte/board.gd\n</prompt>')).toBe('Fix the jump in refonte/board.gd')
   expect(extractPrompt('Fix it')).toBe('Fix it')
   expect(extractPrompt('<prompt>  </prompt>')).toBeUndefined()
-  expect(isSamePrompt('fix  the\nbug', 'fix the bug ')).toBe(true)
-  expect(isSamePrompt('fix the bug', 'Fix the jump bug')).toBe(false)
   expect(enhanceRequest('fix it', 'claude-opus-5-5')).toContain('<draft_prompt>\nfix it\n</draft_prompt>')
   expect(enhanceRequest('fix it', 'claude-opus-5-5')).toContain('goes to Claude Opus 5.5, an AI coding agent')
   expect(modelName('claude-opus-5-5')).toBe('Claude Opus 5.5')
@@ -109,12 +107,12 @@ test('Enhance replaces the draft without sending it, and Restore brings the orig
   }
 })
 
-test('a clear prompt is left alone', async ($, on) => {
+test('a press always fills the box, even when the rewrite matches the draft', async ($, on) => {
   const w = world(on, { box: 'Run refonte/tests/run_tests.gd', reply: '<prompt>Run refonte/tests/run_tests.gd</prompt>' })
   await start($)
   await press($, 'terminal', 'enhance')
-  expect(w.filled).toEqual([])
-  expect(w.toasts.at(-1)).toBe('The prompt is already clear.')
+  expect(w.filled).toEqual(['Run refonte/tests/run_tests.gd'])
+  expect(w.toasts.at(-1)).toBe('Prompt enhanced. Review it, then send.')
 })
 
 test('an empty box asks for a prompt and calls no model', async ($, on) => {
@@ -139,6 +137,7 @@ test('one Sonnet call at medium effort carries the project files, skills, tools 
   await press($, 'terminal', 'enhance')
   expect(w.asks).toEqual([{ model: 'sonnet', effort: 'medium' }])
   expect(w.forks[0]).toContain('goes to Claude Opus 5.5')
+  expect(w.systems[0]).toMatch(/^You are a prompt enhancer\./)
   expect(w.systems[0]).toContain('Global rule: answer briefly.')
   expect(w.systems[0]).toContain('Project rule: typed GDScript.')
   expect(w.systems[0]).toContain('- verify-game: Check levels in the real engine')
@@ -173,8 +172,7 @@ test('the Enhance button is an orange Client region, clickable with the mouse', 
     await ui.post('press', { in: 'enhance' })
     await ui.unmount()
   }
-  expect(w.filled).toEqual(['Fix the Jump landing.'])
-  expect(w.toasts).toEqual(['Prompt enhanced. Review it, then send.', 'The prompt is already clear.'])
+  expect(w.filled).toEqual(['Fix the Jump landing.', 'Fix the Jump landing.'])
 })
 
 test('a background task notice does not hide the button or drop the restore', async ($, on) => {

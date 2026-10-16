@@ -22,7 +22,7 @@ Answer `y` to add the marketplace, then pick the user scope. The mod then loads 
 - Makes one model call. It sends the text in your prompt box together with your `CLAUDE.md` files, your skills and commands, the tool names and the last few messages of the conversation.
 - Writes the prompt for the model your session uses (for example Claude Opus 5.5), following Anthropic's prompting advice for current Claude models.
 - Adds structure only when the draft needs it: pasted errors or logs go in their own tag, ordered steps become a numbered list, a large feature gets short sections. A short task stays a few plain sentences.
-- Puts the rewrite in the prompt box. A clear prompt comes back unchanged.
+- Puts the rewrite in the prompt box. Every press improves the prompt, even a clear one.
 - `/enhance <prompt>` does the same from the keyboard.
 
 ## Model
