@@ -32,22 +32,7 @@ Each click uses your Claude Code account, like any other request.
 
 ### Change the model or effort
 
-1. If you installed it from GitHub, remove that copy first:
-
-   ```
-   claude plugin uninstall prompt-enhancer@prompt-enhancer
-   claude plugin marketplace remove prompt-enhancer
-   ```
-
-   Then clone your own copy and install it from that folder:
-
-   ```
-   git clone https://github.com/Abdoul-sudo/prompt-enhancer
-   claude plugin marketplace add ./prompt-enhancer
-   claude plugin install prompt-enhancer@prompt-enhancer --scope user
-   ```
-
-2. Open `hooks/register.tsx` and edit the two lines at the top:
+1. Open `hooks/register.tsx` and edit the two lines at the top:
 
    ```ts
    const MODEL = 'sonnet'
@@ -57,4 +42,4 @@ Each click uses your Claude Code account, like any other request.
    - `MODEL`: an alias (`haiku`, `sonnet`, `opus`) or a full model id such as `claude-opus-5-5`.
    - `EFFORT`: `low`, `medium`, `high`, `xhigh` or `max`. Higher is slower and costs more.
 
-3. Start a new session, or run `/reload-plugins` in a terminal session.
+2. Start a new session, or run `/reload-plugins` in a terminal session.
