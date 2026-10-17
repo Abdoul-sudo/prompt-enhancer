@@ -74,9 +74,11 @@ Do this once:
 
 Claude Code then checks for a new version in the background after a session starts. A new version applies from the next session.
 
+This works only in terminal sessions. The desktop app turns off Claude Code's own updater (`DISABLE_AUTOUPDATER=1`), and that also skips plugin updates. If you use the desktop app, update by hand.
+
 ### Update by hand
 
-In your shell:
+In a terminal (PowerShell, cmd or bash), outside any Claude session:
 
 ```
 claude plugin marketplace update prompt-enhancer
