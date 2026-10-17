@@ -4,7 +4,11 @@ A Claude Code mod that turns a vague prompt into a clear one, using the project 
 
 Type a prompt, click the orange **Enhance prompt** button above the prompt box, review the result, then send it yourself. **Restore original** puts your text back.
 
-From the keyboard, type `/enhance <prompt>` and press Enter to do the same, even in a new session. Nothing goes to Claude: the prompt box gets the result.
+From the keyboard, type `/enhance <prompt>` and press Enter to do the same. Nothing goes to Claude: the prompt box gets the result.
+
+- In a new session, Enter still starts the session, because the mod runs only inside a session.
+- The conversation shows your `/enhance` line and a "A hook blocked your prompt" notice. This notice is normal: it means the mod kept your draft from going to Claude.
+- In the desktop app, the **Enhance prompt** button hides while a next-step box with buttons shows above the prompt. Use `/enhance` then.
 
 ![Typing a vague draft, then one click on Enhance prompt](docs/demo.gif)
 
