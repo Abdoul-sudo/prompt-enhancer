@@ -2,7 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { enhanceRequest, extractPrompt, modelName, recentMessages } from '../hooks/register'
+import { enhanceArgs, enhanceRequest, extractPrompt, modelName, recentMessages } from '../hooks/register'
 
 const VOID = { value: undefined } as never
 const ok = (value: unknown) => ({ value }) as never
@@ -170,10 +170,25 @@ test('one Sonnet call at medium effort carries project-context.md and the recent
   expect(w.filled).toEqual(['Check level 3 with the verify-game skill.'])
 })
 
-test('/enhance <prompt> fills the box from its argument', async ($, on) => {
+test('/enhance <prompt> typed in full fills the box and is never sent', async ($, on) => {
   const w = world(on, { reply: '<prompt>Explain the stack limit in refonte/main.gd.</prompt>' })
   await start($)
-  const r = await $.command.run({ command: 'enhance', args: 'explain stack limit' } as never)
+  const r = await $.prompt.submit({ text: '/enhance explain stack limit', origin: { kind: 'composer' } } as never)
+  expect(r).toEqual({ drop: 'Prompt enhanced. Review it, then send.' })
+  expect(w.filled).toEqual(['Explain the stack limit in refonte/main.gd.'])
+})
+
+test('enhanceArgs reads the draft after either name of the command', () => {
+  expect(enhanceArgs('/enhance fix it')).toBe('fix it')
+  expect(enhanceArgs('/prompt-enhancer:enhance fix it\nnow')).toBe('fix it\nnow')
+  expect(enhanceArgs('/enhancer fix it')).toBeUndefined()
+  expect(enhanceArgs('please /enhance fix it')).toBeUndefined()
+})
+
+test('/prompt-enhancer:enhance, listed before the session starts, fills the box', async ($, on) => {
+  const w = world(on, { reply: '<prompt>Explain the stack limit in refonte/main.gd.</prompt>' })
+  await start($)
+  const r = await $.command.run({ command: 'prompt-enhancer:enhance', args: 'explain stack limit' } as never)
   expect(r.text).toBe('Prompt enhanced. Review it, then send.')
   expect(w.filled).toEqual(['Explain the stack limit in refonte/main.gd.'])
 })

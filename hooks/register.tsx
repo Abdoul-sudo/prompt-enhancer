@@ -23,6 +23,14 @@ const ORANGE_HOVER = '#FB923C'
 const BLUE = '#60A5FA'
 const BLUE_HOVER = '#93C5FD'
 const PERSON_ORIGINS: ReadonlySet<string> = new Set(['composer', 'bridge', 'sdk'])
+/** `/enhance <prompt>` as typed, or `/prompt-enhancer:enhance <prompt>`, the command commands/enhance.md lists. */
+const ENHANCE_PATTERN = /^\/(?:prompt-enhancer:)?enhance(?:\s+([\s\S]*))?$/
+
+/** The draft after `/enhance`, or undefined when `text` is not that command. */
+export function enhanceArgs(text: string): string | undefined {
+  const match = ENHANCE_PATTERN.exec(text.trim())
+  return match === null ? undefined : (match[1] ?? '')
+}
 
 /**
  * Turns a model id into the name people use: `claude-opus-5-5` into "Claude Opus 5.5".
@@ -198,11 +206,6 @@ export const register: Register = on => {
     await update($, isBusy, () => false)
     await update($, contextRequest, () => null)
     await refreshProjectContext($)
-    await $.command.register({
-      name: 'enhance',
-      description: 'Rewrite a prompt into a clearer one for this project and put it in the prompt box',
-      argumentHint: '<prompt>',
-    })
     return next(e)
   })
 
@@ -220,13 +223,17 @@ export const register: Register = on => {
   // Only a prompt the person sends empties their box; task notices, schedules and peers leave it as it is.
   on('prompt.submit', async ($, e, next) => {
     if (!PERSON_ORIGINS.has(e.origin.kind)) return next(e)
+    // `/enhance <prompt>` typed in full, which no command answers: rewritten into the box, never sent.
+    const draft = enhanceArgs(e.text)
+    if (draft !== undefined) return { drop: await enhance($, draft) }
     knownDraft = false
     await update($, hasDraft, () => false)
     await update($, original, () => null)
     return next(e)
   })
 
-  on('command.run', { command: 'enhance' }, async ($, e) => ({ text: await enhance($, e.args) }))
+  // commands/enhance.md lists /prompt-enhancer:enhance, even before the session exists; the mod answers it, never the model.
+  on('command.run', { command: 'prompt-enhancer:enhance' }, async ($, e) => ({ text: await enhance($, e.args) }))
 
   // The orange Client button posts 'press' when clicked or when Enter reaches it.
   // A turn may have created or removed project-context.md.

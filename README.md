@@ -4,7 +4,7 @@ A Claude Code mod that turns a vague prompt into a clear one, using the project 
 
 Type a prompt, click the orange **Enhance prompt** button above the prompt box, review the result, then send it yourself. **Restore original** puts your text back.
 
-From the keyboard, type `/enhance <prompt>` to do the same.
+From the keyboard, type `/enhance <prompt>` and press Enter to do the same, even in a new session. Nothing goes to Claude: the prompt box gets the result.
 
 ![Typing a vague draft, then one click on Enhance prompt](docs/demo.gif)
 
@@ -93,6 +93,7 @@ Then start a new session.
 | `.claude-plugin/marketplace.json` | Makes this repository its own marketplace, so it installs with one line. |
 | `hooks/register.tsx` | The mod: the button, the rewrite instructions and the model call. |
 | `hooks/color_button.tsx` | The colored buttons, drawn as their own region so the desktop app keeps their color. |
+| `commands/enhance.md` | Lists the enhance command, even before a session starts. The mod runs it, not Claude. |
 | `skills/project-context/SKILL.md` | The skill that creates and updates `project-context.md`. |
 | `types/index.d.ts` | The types of the values the mod keeps for the session. |
 | `tests/enhance.test.tsx` | Tests, run with `claude plugin test .` |
