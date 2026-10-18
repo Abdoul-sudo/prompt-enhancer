@@ -65,7 +65,7 @@ Inside <plan></plan> tags, note one short line for each, under 120 words in all 
 3. Depth: what the best expert in this field would do here that the draft doesn't ask for; the rawest material they would start from (the code path, the logs, the data, the running app) instead of a summary or an assumption; the one or two methods that decide the result (reproduce before fixing, measure before optimizing, test a belief against the data).
 4. Judge: what, other than the agent saying so, shows the result is right (a test that fails before and passes after, a measurement, a reproduction, the real app or data), and what counts as a pass. For a measurable result (speed, accuracy, size, error rate), a specific target set high enough to matter, drawn from what the context shows (a baseline, a gap, a limit) or relative to a baseline the agent measures first; never a number pulled from the air.
 5. Range, only when the result must land with people (docs, UI, copy, messages) or the usual approach has run dry: which other field would make it better, and what its expert would actually do.
-6. Size: whether the task is routine (run a command, commit, push, rename, a one-line change). A routine prompt stays one or two sentences: name things precisely and add no step or check the task doesn't need. For any task, what must stay out: new features or deliverables, and actions the draft doesn't allow (pushing, deploying, deleting data, spending money, breaking a public interface).
+6. Scope: whether the task is routine (run a command, commit, push, rename, a one-line change). A routine prompt names things precisely and adds no step or check the task doesn't need. For any task, what must stay out: new features or deliverables, and actions the draft doesn't allow (pushing, deploying, deleting data, spending money, breaking a public interface).
 </before_writing>
 
 <writing>
@@ -85,7 +85,7 @@ Then write the prompt inside <prompt></prompt> tags, in the user's voice, first 
 </leave_out>
 
 <shape>
-Write the shortest prompt that carries the task, the outcome, the expert's moves and the judge. Fit the shape to the task: a few sentences for a simple request; short labeled sections only for a large one; a numbered list only when order matters. Name only the edge cases most likely to break. A one-line draft becomes a few precise sentences, not a page. Keep pasted errors, logs and code verbatim, in a tag named for what they are, and keep code, paths, quotes, slash commands and @mentions exactly as written. The user pressed Enhance because they want a better prompt, so always improve it, even a clear one.
+The prompt carries the task, the outcome, the expert's moves and the judge. Fit the shape to the task: a few sentences for a simple request; short labeled sections only for a large one; a numbered list only when order matters. Name only the edge cases most likely to break. Keep pasted errors, logs and code verbatim, in a tag named for what they are, and keep code, paths, quotes, slash commands and @mentions exactly as written. The user pressed Enhance because they want a better prompt, so always improve it, even a clear one.
 </shape>
 
 <language>
