@@ -1,34 +1,53 @@
-import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import { atom, read, update } from "claude-code";
+import type { EngineInterface, Register } from "claude-code";
 
-const hasDraft = atom({ plugin: 'prompt-enhancer', key: 'hasDraft' } as const, null)
-const isBusy = atom({ plugin: 'prompt-enhancer', key: 'isBusy' } as const, false)
-const original = atom({ plugin: 'prompt-enhancer', key: 'original' } as const, null)
-const hasProjectContext = atom({ plugin: 'prompt-enhancer', key: 'hasProjectContext' } as const, null)
-const contextRequest = atom({ plugin: 'prompt-enhancer', key: 'contextRequest' } as const, null)
+const hasDraft = atom(
+  { plugin: "prompt-enhancer", key: "hasDraft" } as const,
+  null,
+);
+const isBusy = atom(
+  { plugin: "prompt-enhancer", key: "isBusy" } as const,
+  false,
+);
+const original = atom(
+  { plugin: "prompt-enhancer", key: "original" } as const,
+  null,
+);
+const hasProjectContext = atom(
+  { plugin: "prompt-enhancer", key: "hasProjectContext" } as const,
+  null,
+);
+const contextRequest = atom(
+  { plugin: "prompt-enhancer", key: "contextRequest" } as const,
+  null,
+);
 
-const MAX_MESSAGE_CHARS = 2000
+const MAX_MESSAGE_CHARS = 2000;
 /** One exchange is the user's message and the agent's reply. */
-const RECENT_EXCHANGES = 8
+const RECENT_EXCHANGES = 8;
 /** The project description the mod reads; its `project-context` skill writes it. */
-const PROJECT_CONTEXT_FILE = 'project-context.md'
-const MAX_CONTEXT_FILE_CHARS = 20000
+const PROJECT_CONTEXT_FILE = "project-context.md";
+const MAX_CONTEXT_FILE_CHARS = 20000;
 /** Alias the engine resolves to the newest Sonnet, as `--model sonnet` does. */
-const MODEL = 'sonnet'
+const MODEL = "sonnet";
 /** Tested: as fast as low on short drafts, with shorter and cleaner rewrites. */
-const EFFORT = 'medium'
-const ORANGE = '#F97316'
-const ORANGE_HOVER = '#FB923C'
-const BLUE = '#60A5FA'
-const BLUE_HOVER = '#93C5FD'
-const PERSON_ORIGINS: ReadonlySet<string> = new Set(['composer', 'bridge', 'sdk'])
+const EFFORT = "medium";
+const ORANGE = "#F97316";
+const ORANGE_HOVER = "#FB923C";
+const BLUE = "#60A5FA";
+const BLUE_HOVER = "#93C5FD";
+const PERSON_ORIGINS: ReadonlySet<string> = new Set([
+  "composer",
+  "bridge",
+  "sdk",
+]);
 /** `/enhance <prompt>` as typed, or `/prompt-enhancer:enhance <prompt>`, the command commands/enhance.md lists. */
-const ENHANCE_PATTERN = /^\/(?:prompt-enhancer:)?enhance(?:\s+([\s\S]*))?$/
+const ENHANCE_PATTERN = /^\/(?:prompt-enhancer:)?enhance(?:\s+([\s\S]*))?$/;
 
 /** The draft after `/enhance`, or undefined when `text` is not that command. */
 export function enhanceArgs(text: string): string | undefined {
-  const match = ENHANCE_PATTERN.exec(text.trim())
-  return match === null ? undefined : (match[1] ?? '')
+  const match = ENHANCE_PATTERN.exec(text.trim());
+  return match === null ? undefined : (match[1] ?? "");
 }
 
 /**
@@ -36,10 +55,15 @@ export function enhanceArgs(text: string): string | undefined {
  * Anything that is not a `claude-` id, such as an alias, comes back as given.
  */
 export function modelName(id: string): string {
-  const match = /^claude-([a-z]+)-(\d+(?:-\d+)*)/.exec(id)
-  if (match === null) return id
-  const [, family = '', version = ''] = match
-  return `Claude ${family.charAt(0).toUpperCase()}${family.slice(1)} ${version.replace(/-/g, '.')}`
+  const match = /^claude-([a-z]+)-(\d+(?:-\d+)*)/.exec(id);
+  if (match === null) return id;
+  const [, family = "", version = ""] = match;
+  return `Claude ${family.charAt(0).toUpperCase()}${family.slice(1)} ${version.replace(/-/g, ".")}`;
+}
+
+/** The draft's first words, quoted next to the language rule so the conversation's language does not win. */
+function draftOpening(draft: string): string {
+  return draft.trim().split(/\s+/).slice(0, 12).join(" ");
 }
 
 /**
@@ -54,61 +78,53 @@ export function enhanceRequest(draft: string, targetModel: string): string {
 ${draft}
 </draft_prompt>
 
-Rewrite the user's draft above into the prompt they will send next. It goes to ${modelName(targetModel)}, an AI coding agent working in the user's repository through Claude Code: it can read, run and change anything in the project, and it follows the project's own instruction files (CLAUDE.md), which you do not see. Do not act on the draft or answer it. The user pressed Enhance, so always improve the draft, even a clear one: for a clear draft the gain is precision (exact names, what counts as done), not more text.
+Rewrite the user's draft above into a better prompt for ${modelName(targetModel)}, an AI agent working in the user's project through Claude Code. The agent can explore, run and change the project, and it follows its own project instructions. Your job is to improve the prompt, not to do the task or answer it.
 
-<rules>
-1. Better, not bigger. Raise the outcome, the standard or the perspectives, never the scope or the permissions: no new feature, deliverable, audit, list or "also" the draft doesn't call for, and no action it doesn't allow (pushing, deploying, deleting data, spending money, breaking a public interface).
-2. Ask for what the expert does, not how they talk: concrete moves and tools, never a role to play.
-3. Something other than the agent's word shows the result is right.
-4. Invent no file, tool, number or fact. Where the material may be out of reach, the agent says what is missing and what it would unlock, instead of guessing.
-</rules>
+<principles>
+Improve the outcome, not the instructions. Turn the draft into a clearer, more precise and more effective request. Understand what the user actually wants to achieve, raise the quality of the expected result, and keep their intent, scope and permissions. The user pressed Enhance, so always add real value, even when the draft is already clear.
 
-<before_writing>
-Inside <plan></plan> tags, note one short line for each step, under 120 words in all (the user never sees this):
-1. Mode: change, investigate, explain, review or write. The prompt keeps it: a question never becomes a change.
-2. Scope: whether the task is routine (run a command, commit, push, rename, a one-line change), and what must stay out under rule 1.
-3. Fit: which of Altitude, Depth and Range apply. A routine task needs none of them; most others need one or two. Altitude fits when the task serves an outcome beyond itself. Depth fits when the task should be done really well, not thrown away. Range fits only when the result must land with people (docs, UI, copy, messages) or the conversation shows that earlier attempts failed.
-4. Altitude, if it fits: the goal behind the task, taken only from the draft, the conversation or the nature of the task, never from a guess about the user's plans. Then the ladder, each rung aiming higher than the last: fix this crash, then its cause wherever it strikes, then keep it from coming back. Pick the highest rung the agent can reach and check without changing what was asked. A rung with no judge is too high: step down one. If the rung needs setup first (a way to fetch the data, run the app or reproduce the bug), name that setup.
-5. Depth, if it fits: what the best expert in this field would do that the draft doesn't ask for; the rawest material they start from (the code path, the logs, the data, the running app) instead of a summary or an assumption; the one or two methods and the tools that decide the result (reproduce before fixing, profile before optimizing, test a belief against the data).
-6. Range, if it fits: say what the task does as verbs, not nouns (an error message "tells a stuck user what happened and what to do next"); the verbs show which fields can help. Name one or two fields, what each one's expert would actually do, and the tool they would use.
-7. Judge, always: what shows the result is right and what counts as a pass, fitted to the mode. A fix: a test that fails before and passes after. An "is it done?" check: evidence from the real project state. An explanation: the points it must cover. A deletion: the list of what goes. A routine task: what counts as done, in a few words, with no extra check. A measurable result (speed, accuracy, size, error rate): a specific target set high enough to matter, drawn from the context (a baseline, a gap, a limit) or relative to a baseline the agent measures first, never a number pulled from the air.
-</before_writing>
+Better, not bigger. Understand the goal behind the task, raise the standard of the result to what the best expert in the field would expect, and bring in perspectives from other fields when they would make the result better. Add that expertise without widening the scope, adding unrelated work or making the prompt more complex than it needs to be.
 
-<writing>
-Then write the prompt inside <prompt></prompt> tags, in the user's voice, first person, in the language of the text inside <draft_prompt> whatever language the context uses:
-- Say what to do, with the outcome in a clause when it changes how the agent should work.
-- Turn each part of the plan that fits into concrete moves, not adjectives: "reproduce it with a failing test, then fix the cause" rather than "be thorough"; "profile it first and remove the biggest cost" rather than "make it faster". Name only the moves that decide the result and the edge cases most likely to break; the agent plans the rest.
-- Point at the raw material by its exact name. Use the conversation and the project context to make concrete what the draft refers to (the file, function, error, number or decision), never to add topics it doesn't mention.
-- End with the judge from the plan. For a measurable result, ask for the real numbers against the target, even if they fall short.
-- A higher rung that would replace or enlarge the task is never a step. At most one closing line asks the agent to propose it, and only when the user would clearly want it.
-- Fit the shape to the task: a few sentences for a simple request; short labeled sections only for a large one; a numbered list only when order matters.
-- Keep pasted errors, logs and code verbatim, in a tag named for what they are. Keep code, paths, quotes, slash commands and @mentions exactly as written.
-</writing>
+Focus on the outcome, not the process. Say what the problem is, what result the user wants and what matters about it. Leave the investigation, technical decisions, implementation and verification strategy to the agent. Don't anticipate its reasoning with lists of possible causes, hypothetical scenarios, technical approaches or steps; include such details only when the user's request contains them or when they change the expected result.
 
-<leave_out>
-- Role lines ("You are a senior engineer"), "think step by step", "be thorough", emphasis in capitals.
-- General process rules the agent's instruction files may already set, such as commit-message format, test conventions or trailers. Name a file, skill or command they define without restating its rules.
-- Sentences about the draft, the user or what is unknown, such as "I haven't said how it breaks" or "I'm not sure what's wrong". Every sentence tells the agent what to do or what a good result is.
-- Anything that makes the prompt longer without changing what the agent does or how well.
-</leave_out>
+Keep the nature of the request. A question stays a question, an investigation stays an investigation, and a request for changes clearly says to make them. For a problem, ask for the underlying cause to be fixed, not the symptom. For creative work, describe the intended experience and the quality bar, and leave room for exploration and original solutions.
 
-Reply with the <plan> block, then the <prompt> block, and nothing else.`
+Use context intelligently. Bring in what the conversation and the project context make clear when it adds real precision, such as the feature, screen or decision in question, and keep the decisions and constraints already settled. Invent no files, commands, technical details, causes or facts. Add no hypothetical limitation, uncertainty or fallback ("if the feature doesn't exist, tell me") unless the conversation or the project context shows it applies: it pulls the agent away from the real problem. When a word in the draft is vague and the context doesn't explain it, keep it open and let the agent find what it refers to, rather than guessing a meaning. Leave out what the agent can find better on its own.
+
+Define what success looks like. Make the expected result clear and, where it helps, say how success will be recognized. Prefer outcomes and evidence over a prescribed testing procedure, and impose no tool, test, metric or deliverable the user didn't ask for.
+
+Be selective. Every addition should improve the agent's understanding or the quality of its result. Leave out explanations, speculative diagnoses, exhaustive checklists, repetition and generic advice. The goal is not the most detailed prompt but the most effective one.
+</principles>
+
+<output>
+Write the improved prompt in the first person, as natural, clearly separated paragraphs, without fixed headings or templates. Fit the structure, length and depth to the task: a simple request stays short, a complex one gets the detail it needs. Use headings or lists only when they make it clearer.
+
+Keep the code, paths, commands, identifiers, error messages and quotes the user wrote exactly as written, and improve the prose around them freely.
+
+Write the prompt in the same language as the draft, which begins: "${draftOpening(draft)}". The user picks the language of each message on purpose, so the language of the conversation or of the project context says nothing about this one.
+
+Return only the improved prompt inside <prompt></prompt> tags, with no analysis, commentary or explanation.
+</output>`;
 }
 
 /**
  * Takes the rewritten prompt out of the model's reply; undefined when nothing usable came back.
- * The <plan> the model writes first is its own notes and never reaches the prompt box.
+ * A <plan> block, if the model writes one, is its own notes and never reaches the prompt box.
  */
 export function extractPrompt(reply: string): string | undefined {
-  const withoutPlan = reply.replace(/<plan>[\s\S]*?<\/plan>/g, '')
+  const withoutPlan = reply.replace(/<plan>[\s\S]*?<\/plan>/g, "");
   // The last <prompt> block; one cut short by the token cap runs to the end of the reply.
-  const tagged = [...withoutPlan.matchAll(/<prompt>([\s\S]*?)(?:<\/prompt>|$)/g)].at(-1)?.[1]
-  const text = (tagged ?? (withoutPlan.includes('<plan>') ? '' : withoutPlan)).trim()
-  return text === '' ? undefined : text
+  const tagged = [
+    ...withoutPlan.matchAll(/<prompt>([\s\S]*?)(?:<\/prompt>|$)/g),
+  ].at(-1)?.[1];
+  const text = (
+    tagged ?? (withoutPlan.includes("<plan>") ? "" : withoutPlan)
+  ).trim();
+  return text === "" ? undefined : text;
 }
 
 function clip(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max)}\n[...cut]` : text
+  return text.length > max ? `${text.slice(0, max)}\n[...cut]` : text;
 }
 
 /**
@@ -116,33 +132,48 @@ function clip(text: string, max: number): string {
  * replies alike. User rows that are machine text (task notices, reminders) start
  * with a tag and are left out.
  */
-export function recentMessages<M extends { role: string; text: string }>(messages: readonly M[]): M[] {
+export function recentMessages<M extends { role: string; text: string }>(
+  messages: readonly M[],
+): M[] {
   return messages
-    .filter(m => m.text.trim() !== '' && !(m.role === 'user' && m.text.trimStart().startsWith('<')))
-    .slice(-2 * RECENT_EXCHANGES)
+    .filter(
+      (m) =>
+        m.text.trim() !== "" &&
+        !(m.role === "user" && m.text.trimStart().startsWith("<")),
+    )
+    .slice(-2 * RECENT_EXCHANGES);
 }
 
 /** What the enhancer knows of the project: where it runs, its project-context.md and the latest messages. */
 export type ProjectContext = {
-  cwd: string
-  contextFile?: { path: string; text: string }
-  messages: readonly { role: string; text: string }[]
-}
+  cwd: string;
+  contextFile?: { path: string; text: string };
+  messages: readonly { role: string; text: string }[];
+};
 
 /** The system prompt: the enhancer's job, then the project's context. */
 export function enhancerSystem(context: ProjectContext): string {
-  const parts: string[] = [`Working directory: ${context.cwd}`]
-  // project-context.md describes the project itself (what it is, its parts, its files), so it is sent whole.
-  if (context.contextFile !== undefined && context.contextFile.text.trim() !== '') {
-    const { path, text } = context.contextFile
-    parts.push(`<project_context path="${path}">\n${clip(text, MAX_CONTEXT_FILE_CHARS)}\n</project_context>`)
+  const parts: string[] = [`Working directory: ${context.cwd}`];
+  // project-context.md describes the project itself (what it is, its features, its parts), so it is sent whole.
+  if (
+    context.contextFile !== undefined &&
+    context.contextFile.text.trim() !== ""
+  ) {
+    const { path, text } = context.contextFile;
+    parts.push(
+      `<project_context path="${path}">\n${clip(text, MAX_CONTEXT_FILE_CHARS)}\n</project_context>`,
+    );
   }
-  const recent = recentMessages(context.messages)
+  const recent = recentMessages(context.messages);
   if (recent.length > 0) {
-    const lines = recent.map(m => `<${m.role}>\n${clip(m.text, MAX_MESSAGE_CHARS)}\n</${m.role}>`)
-    parts.push(`The conversation so far (latest messages):\n${lines.join('\n')}`)
+    const lines = recent.map(
+      (m) => `<${m.role}>\n${clip(m.text, MAX_MESSAGE_CHARS)}\n</${m.role}>`,
+    );
+    parts.push(
+      `The conversation so far (latest messages, for context only; the prompt keeps the draft's language, not theirs):\n${lines.join("\n")}`,
+    );
   }
-  return `You are a prompt enhancer. You turn a developer's draft into the prompt they send to their AI coding agent in this project. You write that prompt; you never do the task or answer the draft. The project's context:\n\n${parts.join('\n\n')}`
+  return `You are a prompt enhancer. You turn a developer's draft into the prompt they send to their AI coding agent in this project. You write that prompt; you never do the task or answer the draft. The project's context:\n\n${parts.join("\n\n")}`;
 }
 
 /**
@@ -150,25 +181,32 @@ export function enhancerSystem(context: ProjectContext): string {
  * CLAUDE.md, skills and tools are left out: the agent that runs the prompt already has them.
  */
 async function projectContext($: EngineInterface): Promise<ProjectContext> {
-  const path = await projectContextPath($)
-  const text = await $.fs.read(path).catch(() => '')
-  const messages = await $.session.messages().catch(() => [])
-  return { cwd: await $.session.cwd(), contextFile: { path, text }, messages: Array.isArray(messages) ? messages : [] }
+  const path = await projectContextPath($);
+  const text = await $.fs.read(path).catch(() => "");
+  const messages = await $.session.messages().catch(() => []);
+  return {
+    cwd: await $.session.cwd(),
+    contextFile: { path, text },
+    messages: Array.isArray(messages) ? messages : [],
+  };
 }
 
 /** Rewrites the draft with one Sonnet call at medium effort, fed the project's context. */
-async function rewrite($: EngineInterface, draft: string): Promise<{ text: string } | { reason: string }> {
+async function rewrite(
+  $: EngineInterface,
+  draft: string,
+): Promise<{ text: string } | { reason: string }> {
   const reply = await $.model.complete({
     model: MODEL,
     effort: EFFORT,
     system: enhancerSystem(await projectContext($)),
     prompt: enhanceRequest(draft, await $.session.model()),
-    maxTokens: 4000,
+    maxTokens: 16000,
     timeoutMs: 120000,
-  })
-  if (!reply.isAnswered) return { reason: reply.reason }
-  const text = extractPrompt(reply.text)
-  return text === undefined ? { reason: 'empty-reply' } : { text }
+  });
+  if (!reply.isAnswered) return { reason: reply.reason };
+  const text = extractPrompt(reply.text);
+  return text === undefined ? { reason: "empty-reply" } : { text };
 }
 
 /**
@@ -176,38 +214,43 @@ async function rewrite($: EngineInterface, draft: string): Promise<{ text: strin
  * result in the box without sending it. Answers a line for the caller to show.
  */
 async function enhance($: EngineInterface, draft?: string): Promise<string> {
-  if (await read($, isBusy)) return 'Already enhancing.'
-  const source = draft ?? (await $.prompt.read()).text
-  if (source.trim() === '') return 'Type a prompt first, then enhance it.'
-  await update($, isBusy, () => true)
+  if (await read($, isBusy)) return "Already enhancing.";
+  const source = draft ?? (await $.prompt.read()).text;
+  if (source.trim() === "") return "Type a prompt first, then enhance it.";
+  await update($, isBusy, () => true);
   try {
-    const result = await rewrite($, source)
-    if ('reason' in result) return `Could not enhance the prompt (${result.reason}).`
-    const box = await $.prompt.read()
-    const isOverwritingEdits = draft === undefined ? box.text !== source : box.text.trim() !== ''
-    if (isOverwritingEdits) return 'The prompt box changed while enhancing. Your text was kept.'
-    const filled = await $.prompt.fill({ text: result.text })
+    const result = await rewrite($, source);
+    if ("reason" in result)
+      return `Could not enhance the prompt (${result.reason}).`;
+    const box = await $.prompt.read();
+    const isOverwritingEdits =
+      draft === undefined ? box.text !== source : box.text.trim() !== "";
+    if (isOverwritingEdits)
+      return "The prompt box changed while enhancing. Your text was kept.";
+    const filled = await $.prompt.fill({ text: result.text });
     if (!filled.isFilled) {
-      const copied = await $.ui.copy({ text: result.text })
-      return copied.isCopied ? 'The prompt box is busy. The enhanced prompt is on the clipboard.' : 'The prompt box is busy. Try again.'
+      const copied = await $.ui.copy({ text: result.text });
+      return copied.isCopied
+        ? "The prompt box is busy. The enhanced prompt is on the clipboard."
+        : "The prompt box is busy. Try again.";
     }
-    await update($, original, () => source)
-    await update($, hasDraft, () => true)
-    return 'Prompt enhanced. Review it, then send.'
+    await update($, original, () => source);
+    await update($, hasDraft, () => true);
+    return "Prompt enhanced. Review it, then send.";
   } finally {
-    await update($, isBusy, () => false)
+    await update($, isBusy, () => false);
   }
 }
 
 async function restore($: EngineInterface): Promise<void> {
-  const text = await read($, original)
-  if (text === null) return
-  const filled = await $.prompt.fill({ text })
+  const text = await read($, original);
+  if (text === null) return;
+  const filled = await $.prompt.fill({ text });
   if (!filled.isFilled) {
-    $.ui.toast('The prompt box is busy. Try again.')
-    return
+    $.ui.toast("The prompt box is busy. Try again.");
+    return;
   }
-  await update($, original, () => null)
+  await update($, original, () => null);
 }
 
 /**
@@ -215,107 +258,125 @@ async function restore($: EngineInterface): Promise<void> {
  * never a parent folder, so a file from another project is never read.
  */
 async function projectContextPath($: EngineInterface): Promise<string> {
-  return `${await $.session.root()}/${PROJECT_CONTEXT_FILE}`
+  return `${await $.session.root()}/${PROJECT_CONTEXT_FILE}`;
 }
 
 /** Whether the project has a project-context.md, so the band offers to create one only when it is missing. */
 async function refreshProjectContext($: EngineInterface): Promise<void> {
-  const exists = await $.fs.exists(await projectContextPath($)).catch(() => false)
-  await update($, hasProjectContext, () => exists)
+  const exists = await $.fs
+    .exists(await projectContextPath($))
+    .catch(() => false);
+  await update($, hasProjectContext, () => exists);
 }
 
 /** Has a background subagent write project-context.md with the mod's skill, outside the conversation. */
 async function createProjectContext($: EngineInterface): Promise<void> {
   // One request at a time: the button hides until the subagent ends.
-  if ((await read($, contextRequest)) !== null) return
-  await update($, contextRequest, () => 'starting')
+  if ((await read($, contextRequest)) !== null) return;
+  await update($, contextRequest, () => "starting");
   const spawned = await $.agent
     .spawn({
-      description: 'Create project-context.md',
+      description: "Create project-context.md",
       prompt: `The user asked for a project-context.md. Create ${await projectContextPath($)} by following ${$.plugin.root}/skills/project-context/SKILL.md.`,
     })
-    .catch(() => undefined)
+    .catch(() => undefined);
   if (spawned?.agentId === undefined) {
-    await update($, contextRequest, () => null)
-    $.ui.toast('Could not start creating project-context.md.')
-    return
+    await update($, contextRequest, () => null);
+    $.ui.toast("Could not start creating project-context.md.");
+    return;
   }
-  const agentId = spawned.agentId
-  await update($, contextRequest, () => agentId)
+  const agentId = spawned.agentId;
+  await update($, contextRequest, () => agentId);
 }
 
-export const register: Register = on => {
-  let knownDraft: boolean | null = null
+export const register: Register = (on) => {
+  let knownDraft: boolean | null = null;
 
-  on('session.start', async ($, e, next) => {
-    await update($, isBusy, () => false)
-    await update($, contextRequest, () => null)
-    await refreshProjectContext($)
-    return next(e)
-  })
+  on("session.start", async ($, e, next) => {
+    await update($, isBusy, () => false);
+    await update($, contextRequest, () => null);
+    await refreshProjectContext($);
+    return next(e);
+  });
 
   // Tracks only whether the box is empty, so the band shows when there is something to enhance.
-  on('prompt.edit', async ($, e, next) => {
-    const box = await next(e)
-    const hasText = box.text.trim() !== ''
+  on("prompt.edit", async ($, e, next) => {
+    const box = await next(e);
+    const hasText = box.text.trim() !== "";
     if (hasText !== knownDraft) {
-      knownDraft = hasText
-      await update($, hasDraft, () => hasText)
+      knownDraft = hasText;
+      await update($, hasDraft, () => hasText);
     }
-    return box
-  }).catch(($, e, next) => next(e))
+    return box;
+  }).catch(($, e, next) => next(e));
 
   // Only a prompt the person sends empties their box; task notices, schedules and peers leave it as it is.
-  on('prompt.submit', async ($, e, next) => {
-    if (!PERSON_ORIGINS.has(e.origin.kind)) return next(e)
+  on("prompt.submit", async ($, e, next) => {
+    if (!PERSON_ORIGINS.has(e.origin.kind)) return next(e);
     // `/enhance <prompt>` typed in full, which no command answers: rewritten into the box, never sent.
-    const draft = enhanceArgs(e.text)
-    if (draft !== undefined) return { drop: await enhance($, draft) }
-    knownDraft = false
-    await update($, hasDraft, () => false)
-    await update($, original, () => null)
-    return next(e)
-  })
+    const draft = enhanceArgs(e.text);
+    if (draft !== undefined) return { drop: await enhance($, draft) };
+    knownDraft = false;
+    await update($, hasDraft, () => false);
+    await update($, original, () => null);
+    return next(e);
+  });
 
   // commands/enhance.md lists /prompt-enhancer:enhance, even before the session exists; the mod answers it, never the model.
-  on('command.run', { command: 'prompt-enhancer:enhance' }, async ($, e) => ({ text: await enhance($, e.args) }))
+  on("command.run", { command: "prompt-enhancer:enhance" }, async ($, e) => ({
+    text: await enhance($, e.args),
+  }));
 
   // A turn may have created or removed project-context.md; the subagent that writes it ends the request.
-  on('turn.complete', async ($, e, next) => {
+  on("turn.complete", async ($, e, next) => {
     if (e.agentId === undefined) {
-      await refreshProjectContext($).catch(() => undefined)
+      await refreshProjectContext($).catch(() => undefined);
     } else if ((await read($, contextRequest)) === e.agentId) {
-      await refreshProjectContext($).catch(() => undefined)
-      await update($, contextRequest, () => null)
-      $.ui.toast((await read($, hasProjectContext)) ? 'project-context.md created.' : 'Could not create project-context.md.')
+      await refreshProjectContext($).catch(() => undefined);
+      await update($, contextRequest, () => null);
+      $.ui.toast(
+        (await read($, hasProjectContext))
+          ? "project-context.md created."
+          : "Could not create project-context.md.",
+      );
     }
-    return next(e)
-  })
+    return next(e);
+  });
 
-  on('ui.message', { element: 'create-context' }, async ($, e, next) => {
-    if (e.data === 'press') await createProjectContext($)
-    return next(e)
-  })
+  on("ui.message", { element: "create-context" }, async ($, e, next) => {
+    if (e.data === "press") await createProjectContext($);
+    return next(e);
+  });
 
   // The orange Client button posts 'press' when clicked or when Enter reaches it.
-  on('ui.message', { element: 'enhance' }, async ($, e, next) => {
-    if (e.data === 'press') $.ui.toast(await enhance($))
-    return next(e)
-  })
+  on("ui.message", { element: "enhance" }, async ($, e, next) => {
+    if (e.data === "press") $.ui.toast(await enhance($));
+    return next(e);
+  });
 
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey) return next(e)
-    const busy = await read($, isBusy)
-    const draft = await read($, hasDraft)
-    const before = await read($, original)
-    const canEnhance = !busy && draft !== false
-    const isCreatingContext = (await read($, contextRequest)) !== null
-    const canCreateContext = !busy && !isCreatingContext && (await read($, hasProjectContext)) === false
-    if (!busy && !canEnhance && before === null && !canCreateContext && !isCreatingContext) return next(e)
-    const elements = $.ui.resolve(e)
-    const { Box, Button, Text } = elements
-    const Client = 'Client' in elements ? elements.Client : undefined
-    const below = await next(e)
+  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
+    if (e.props.hasSurvey) return next(e);
+    const busy = await read($, isBusy);
+    const draft = await read($, hasDraft);
+    const before = await read($, original);
+    const canEnhance = !busy && draft !== false;
+    const isCreatingContext = (await read($, contextRequest)) !== null;
+    const canCreateContext =
+      !busy &&
+      !isCreatingContext &&
+      (await read($, hasProjectContext)) === false;
+    if (
+      !busy &&
+      !canEnhance &&
+      before === null &&
+      !canCreateContext &&
+      !isCreatingContext
+    )
+      return next(e);
+    const elements = $.ui.resolve(e);
+    const { Box, Button, Text } = elements;
+    const Client = "Client" in elements ? elements.Client : undefined;
+    const below = await next(e);
     return (
       <Box flexDirection="column">
         <Box flexDirection="row" justifyContent="flex-end" width="100%" gap={1}>
@@ -324,37 +385,60 @@ export const register: Register = on => {
               <Client
                 key="create-context"
                 module="./color_button.tsx"
-                props={{ label: 'Create project context', color: BLUE, hoverColor: BLUE_HOVER }}
+                props={{
+                  label: "Create project context",
+                  color: BLUE,
+                  hoverColor: BLUE_HOVER,
+                }}
               />
             ) : (
-              <Button key="create-context" onPress={() => createProjectContext($)}>
+              <Button
+                key="create-context"
+                onPress={() => createProjectContext($)}
+              >
                 <Text color={BLUE} bold>
                   Create project context
                 </Text>
               </Button>
             ))}
-          {isCreatingContext && <Text color={BLUE}>Creating project context…</Text>}
+          {isCreatingContext && (
+            <Text color={BLUE}>Creating project context…</Text>
+          )}
           {busy && <Text color={ORANGE}>Enhancing prompt…</Text>}
           {canEnhance &&
             (Client !== undefined ? (
               <Client
                 key="enhance"
                 module="./color_button.tsx"
-                props={{ label: 'Enhance prompt', color: ORANGE, hoverColor: ORANGE_HOVER }}
+                props={{
+                  label: "Enhance prompt",
+                  color: ORANGE,
+                  hoverColor: ORANGE_HOVER,
+                }}
               />
             ) : (
-              <Button key="enhance" hotkey="e" onPress={async () => $.ui.toast(await enhance($))}>
+              <Button
+                key="enhance"
+                hotkey="e"
+                onPress={async () => $.ui.toast(await enhance($))}
+              >
                 <Text color={ORANGE} bold>
                   Enhance prompt
                 </Text>
               </Button>
             ))}
           {!busy && before !== null && (
-            <Button key="restore" label="↶ Restore original" hotkey="r" dimColor onPress={() => restore($)} />
+            <Button
+              key="restore"
+              label="↶ Restore original"
+              hotkey="r"
+              dimColor
+              onPress={() => restore($)}
+            />
           )}
         </Box>
         {below}
       </Box>
-    )
-  })
-}
+    );
+  });
+};
