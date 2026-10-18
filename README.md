@@ -6,7 +6,7 @@ Type a prompt, then click the orange **Enhance prompt** button above the prompt 
 
 You can also type `/enhance <prompt>` and press Enter. Nothing goes to Claude: the result goes in the prompt box.
 
-![Typing a vague draft, then one click on Enhance prompt](docs/demo.gif)
+![Three short drafts, a bug, a slow page and a question, each improved with one click on Enhance prompt](docs/demo.gif)
 
 ## Install
 
