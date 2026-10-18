@@ -20,7 +20,7 @@ Answer `y`, then pick the user scope. The mod loads in every session, the deskto
 
 ### Better results: project-context.md
 
-Add a `project-context.md` file to your project: a short description of the project, its main parts and its key files. The mod reads it to write better prompts.
+Add a `project-context.md` file to your project: a short description of the project and its features. The mod reads it to write better prompts.
 
 - **Create it:** click the blue **Create project context** button. It shows when the file is missing.
 - **Keep it current:** Claude updates the file after big changes. You can also run `/prompt-enhancer:project-context`.
