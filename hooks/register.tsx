@@ -13,7 +13,6 @@ const RECENT_EXCHANGES = 8
 /** The project description the mod reads; its `project-context` skill writes it. */
 const PROJECT_CONTEXT_FILE = 'project-context.md'
 const MAX_CONTEXT_FILE_CHARS = 20000
-const CREATE_CONTEXT_PROMPT = 'Create project-context.md for this project with the prompt-enhancer project-context skill.'
 /** Alias the engine resolves to the newest Sonnet, as `--model sonnet` does. */
 const MODEL = 'sonnet'
 /** Tested: as fast as low on short drafts, with shorter and cleaner rewrites. */
@@ -225,12 +224,24 @@ async function refreshProjectContext($: EngineInterface): Promise<void> {
   await update($, hasProjectContext, () => exists)
 }
 
-/** Asks Claude to write project-context.md with the mod's skill, as a turn the user watches. */
+/** Has a background subagent write project-context.md with the mod's skill, outside the conversation. */
 async function createProjectContext($: EngineInterface): Promise<void> {
-  // One request at a time: the button hides until the turn that answers it ends.
+  // One request at a time: the button hides until the subagent ends.
   if ((await read($, contextRequest)) !== null) return
-  await update($, contextRequest, () => 'queued')
-  await $.prompt.submit({ text: CREATE_CONTEXT_PROMPT })
+  await update($, contextRequest, () => 'starting')
+  const spawned = await $.agent
+    .spawn({
+      description: 'Create project-context.md',
+      prompt: `The user asked for a project-context.md. Create ${await projectContextPath($)} by following ${$.plugin.root}/skills/project-context/SKILL.md.`,
+    })
+    .catch(() => undefined)
+  if (spawned?.agentId === undefined) {
+    await update($, contextRequest, () => null)
+    $.ui.toast('Could not start creating project-context.md.')
+    return
+  }
+  const agentId = spawned.agentId
+  await update($, contextRequest, () => agentId)
 }
 
 export const register: Register = on => {
@@ -269,20 +280,14 @@ export const register: Register = on => {
   // commands/enhance.md lists /prompt-enhancer:enhance, even before the session exists; the mod answers it, never the model.
   on('command.run', { command: 'prompt-enhancer:enhance' }, async ($, e) => ({ text: await enhance($, e.args) }))
 
-  // The orange Client button posts 'press' when clicked or when Enter reaches it.
-  // A turn may have created or removed project-context.md.
-  // The queued request becomes the id of the turn that runs it.
-  on('turn.start', async ($, e, next) => {
-    if ((await read($, contextRequest)) === 'queued' && e.text.includes(CREATE_CONTEXT_PROMPT)) {
-      await update($, contextRequest, () => e.turnId)
-    }
-    return next(e)
-  })
-
+  // A turn may have created or removed project-context.md; the subagent that writes it ends the request.
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined) {
       await refreshProjectContext($).catch(() => undefined)
-      if ((await read($, contextRequest)) === e.turnId) await update($, contextRequest, () => null)
+    } else if ((await read($, contextRequest)) === e.agentId) {
+      await refreshProjectContext($).catch(() => undefined)
+      await update($, contextRequest, () => null)
+      $.ui.toast((await read($, hasProjectContext)) ? 'project-context.md created.' : 'Could not create project-context.md.')
     }
     return next(e)
   })
@@ -292,6 +297,7 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // The orange Client button posts 'press' when clicked or when Enter reaches it.
   on('ui.message', { element: 'enhance' }, async ($, e, next) => {
     if (e.data === 'press') $.ui.toast(await enhance($))
     return next(e)
@@ -303,9 +309,9 @@ export const register: Register = on => {
     const draft = await read($, hasDraft)
     const before = await read($, original)
     const canEnhance = !busy && draft !== false
-    const canCreateContext =
-      !busy && (await read($, hasProjectContext)) === false && (await read($, contextRequest)) === null
-    if (!busy && !canEnhance && before === null && !canCreateContext) return next(e)
+    const isCreatingContext = (await read($, contextRequest)) !== null
+    const canCreateContext = !busy && !isCreatingContext && (await read($, hasProjectContext)) === false
+    if (!busy && !canEnhance && before === null && !canCreateContext && !isCreatingContext) return next(e)
     const elements = $.ui.resolve(e)
     const { Box, Button, Text } = elements
     const Client = 'Client' in elements ? elements.Client : undefined
@@ -327,6 +333,7 @@ export const register: Register = on => {
                 </Text>
               </Button>
             ))}
+          {isCreatingContext && <Text color={BLUE}>Creating project context…</Text>}
           {busy && <Text color={ORANGE}>Enhancing prompt…</Text>}
           {canEnhance &&
             (Client !== undefined ? (
