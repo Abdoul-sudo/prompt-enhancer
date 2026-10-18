@@ -1,6 +1,6 @@
 {
   "name": "prompt-enhancer",
-  "description": "A Claude Code mod that rewrites vague prompts using the active project's context",
+  "description": "A Claude Code mod that rewrites rough prompts into better ones using the active project's context",
   "owner": {
     "name": "Abdoul-sudo"
   },

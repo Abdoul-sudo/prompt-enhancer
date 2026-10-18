@@ -1,6 +1,6 @@
 # Prompt Enhancer
 
-A Claude Code mod that turns a vague prompt into a clear one, using the project you are working in.
+A Claude Code mod that turns a rough prompt into one that gets a better result: aimed at what you actually want, held to the standard of the best expert in the field, and checked by more than Claude's word. It uses the project you are working in.
 
 Type a prompt, then click the orange **Enhance prompt** button above the prompt box. Review the result and send it yourself. **Restore original** puts your text back.
 
@@ -29,7 +29,16 @@ Add a `project-context.md` file to your project: a short description of the proj
 
 ## How it works
 
-The AI reads your draft, the end of your conversation and your `project-context.md`. It writes a better prompt for the model of your session and puts it in the prompt box.
+The AI reads your draft, the end of your conversation and your `project-context.md`. Before it writes, it works out:
+
+- **The goal behind the task**: what should be true once it's done, so Claude aims at that and not only at your words.
+- **What the best expert would do**: start from the real code, logs or data, and use the method that decides the result, such as reproducing a bug before fixing it or measuring before optimizing.
+- **How to prove it worked**: a test that fails before and passes after, a measurement against a target, a run of the real app. Not Claude saying "done".
+- **Another field's eye**, only when the result has to land with people: a UX writer for error messages, a copywriter for a launch email.
+
+Then it writes the prompt for the model of your session and puts it in the prompt box. It raises the standard, never the size of the job: no extra features, nothing you didn't allow (like pushing or deploying), and a routine request such as "commit and push" stays short. It never does the task itself.
+
+The method comes from Felix Rieseberg's [How to be more ambitious](https://felixrieseberg.com/how-to-be-more-ambitious-a-tutorial-for-humans-with-models/).
 
 ## Model
 
@@ -49,6 +58,8 @@ claude plugin update prompt-enhancer@prompt-enhancer
 Then start a new session.
 
 To update automatically, run `/plugin` in a terminal session, open **Marketplaces**, select `prompt-enhancer`, then **Enable auto-update**.
+
+**Claude desktop app:** it doesn't update plugins automatically, even with auto-update on. Run the two commands above from time to time to get the latest version.
 
 ## License
 

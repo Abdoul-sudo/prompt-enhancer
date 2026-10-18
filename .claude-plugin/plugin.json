@@ -1,6 +1,6 @@
 {
   "name": "prompt-enhancer",
-  "description": "Rewrites the draft in the prompt box into a clearer prompt using the active project's context, without sending it; one press restores the original",
+  "description": "Rewrites the draft in the prompt box into a better prompt for the active project: aimed at the outcome, held to an expert standard and checked by more than the agent's word, without sending it; one press restores the original",
   "types": "./types/index.d.ts",
   "author": { "name": "Abdoul-sudo", "url": "https://github.com/Abdoul-sudo" },
   "repository": "https://github.com/Abdoul-sudo/prompt-enhancer",

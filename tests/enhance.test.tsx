@@ -2,7 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 import type { On } from 'claude-code'
 
-import { enhanceArgs, enhanceRequest, extractPrompt, modelName, recentMessages } from '../hooks/register'
+import { enhanceArgs, enhanceRequest, enhancerSystem, extractPrompt, modelName, recentMessages } from '../hooks/register'
 
 const VOID = { value: undefined } as never
 const ok = (value: unknown) => ({ value }) as never
@@ -106,6 +106,11 @@ test('helpers: the reply is read from its tags, the request names the target mod
   expect(extractPrompt('Sure.\n<prompt>\nFix the jump in refonte/board.gd\n</prompt>')).toBe('Fix the jump in refonte/board.gd')
   expect(extractPrompt('Fix it')).toBe('Fix it')
   expect(extractPrompt('<prompt>  </prompt>')).toBeUndefined()
+  // The plan is the enhancer's own notes and never reaches the prompt box.
+  expect(extractPrompt('<plan>\n1. Mode: change\n</plan>\n<prompt>\nFix the jump.\n</prompt>')).toBe('Fix the jump.')
+  expect(extractPrompt('<plan>Mode: change</plan>\nFix the jump.')).toBe('Fix the jump.')
+  expect(extractPrompt('<plan>Mode: change, the reply was cut')).toBeUndefined()
+  expect(extractPrompt('<plan>x</plan><prompt>Fix the jump, then run')).toBe('Fix the jump, then run')
   expect(enhanceRequest('fix it', 'claude-opus-5-5')).toContain('<draft_prompt>\nfix it\n</draft_prompt>')
   expect(enhanceRequest('fix it', 'claude-opus-5-5')).toContain('goes to Claude Opus 5.5, an AI coding agent')
   expect(modelName('claude-opus-5-5')).toBe('Claude Opus 5.5')
@@ -114,8 +119,30 @@ test('helpers: the reply is read from its tags, the request names the target mod
   expect(modelName('opus')).toBe('opus')
 })
 
+test('the request plans the outcome, the expert standard and an outside judge, and keeps the job its size', () => {
+  const request = enhanceRequest('fix it', 'claude-opus-5-5')
+  for (const part of ['<plan></plan>', 'Outcome:', 'Depth:', 'Judge:', 'Range,', 'Size:', '<prompt></prompt>']) {
+    expect(request).toContain(part)
+  }
+  expect(request).toContain('Make the result better, not the job bigger')
+  expect(request).toContain('Raise the standard, never the scope or the permissions')
+  expect(request).toContain('a question never becomes a change')
+})
+
+test('the system prompt carries project-context.md and the latest messages, and leaves out an empty context file', () => {
+  const messages = [{ role: 'user', text: 'the robot lands one cell short' }]
+  const system = enhancerSystem({ cwd: '/repo', contextFile: { path: '/repo/project-context.md', text: 'A puzzle game.' }, messages })
+  expect(system).toMatch(/^You are a prompt enhancer\./)
+  expect(system).toContain('Working directory: /repo')
+  expect(system).toContain('<project_context path="/repo/project-context.md">\nA puzzle game.\n</project_context>')
+  expect(system).toContain('<user>\nthe robot lands one cell short\n</user>')
+  const bare = enhancerSystem({ cwd: '/repo', contextFile: { path: '/repo/project-context.md', text: '  ' }, messages: [] })
+  expect(bare).not.toContain('<project_context')
+  expect(bare).not.toContain('The conversation so far')
+})
+
 test('Enhance replaces the draft without sending it, and Restore brings the original back', async ($, on) => {
-  const w = world(on, { box: 'fix the jump', reply: '<prompt>Fix the Jump landing in refonte/board.gd.</prompt>' })
+  const w = world(on, { box: 'fix the jump', reply: '<plan>Mode: change.</plan>\n<prompt>Fix the Jump landing in refonte/board.gd.</prompt>' })
   await start($)
   for (const surface of ['terminal', 'desktop'] as const) {
     expect(await buttons($, surface)).toEqual(['enhance'])

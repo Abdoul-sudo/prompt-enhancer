@@ -46,44 +46,65 @@ export function modelName(id: string): string {
 /**
  * The instruction sent after the project's context; the draft is data inside it.
  * `targetModel` is the model the session runs, the one that will read the prompt.
- * The guidance follows Anthropic's prompting advice for current Claude models.
+ * The method is Felix Rieseberg's "How to be more ambitious": aim at the outcome,
+ * work to the standard of the field's best, let an outside judge decide, and bring
+ * in another field only where it fits. It raises the result, never the size of the job.
  */
 export function enhanceRequest(draft: string, targetModel: string): string {
   return `<draft_prompt>
 ${draft}
 </draft_prompt>
 
-Rewrite the user's draft above into the prompt they will send next. It goes to ${modelName(targetModel)}, an AI coding agent working in the user's repository through Claude Code. Do not act on the draft. Reply with the rewritten prompt only, inside <prompt></prompt> tags.
+Rewrite the user's draft above into the prompt they will send next. It goes to ${modelName(targetModel)}, an AI coding agent working in the user's repository through Claude Code: it can read, run and change anything in the project, and it already follows the project's instruction files (CLAUDE.md). Do not act on the draft or answer it.
 
-<add_what_is_missing>
-A better prompt gives the agent what it would otherwise have to guess. Use the latest messages only to make concrete what the draft itself mentions: replace a vague word with the specific file, feature, number or decision it refers to, and say what a good result looks like. Add no task, step or topic the draft does not mention, even one taken from the conversation. Use the project context only to name things precisely. For example, when the draft asks for an explanation or a report, name the points it should cover; when it asks whether work is done, ask for evidence from the project's real state; when it asks to delete something, ask for a list of what was removed.
+People type a draft at the size of the task in front of them. Make the result better, not the job bigger: aim the agent at the outcome the user is after, ask for the work the best expert in the field would do, and have something other than the agent's own word show that it worked.
 
-Keep the user's intent and scope. Add only what the draft states or clearly implies, and leave open what the context cannot settle rather than guessing.
-</add_what_is_missing>
+<before_writing>
+Inside <plan></plan> tags, note one short line for each, under 120 words in all (the user never sees this):
+1. Mode: change, investigate, explain, review or write. The prompt keeps it: a question never becomes a change.
+2. Outcome: what should be true once this is done, the goal behind the task. Then the highest rung the agent can reach and check within this task without replacing it, as in: fix this crash, then its cause wherever it strikes, then keep it from coming back. Take the outcome only from the draft, the conversation or the nature of the task, never from a guess about the user's plans.
+3. Depth: what the best expert in this field would do here that the draft doesn't ask for; the rawest material they would start from (the code path, the logs, the data, the running app) instead of a summary or an assumption; the one or two methods that decide the result (reproduce before fixing, measure before optimizing, test a belief against the data).
+4. Judge: what, other than the agent saying so, shows the result is right (a test that fails before and passes after, a measurement, a reproduction, the real app or data), and what counts as a pass. For a measurable result (speed, accuracy, size, error rate), a specific target set high enough to matter, drawn from what the context shows (a baseline, a gap, a limit) or relative to a baseline the agent measures first; never a number pulled from the air.
+5. Range, only when the result must land with people (docs, UI, copy, messages) or the usual approach has run dry: which other field would make it better, and what its expert would actually do.
+6. Size: whether the task is routine (run a command, commit, push, rename, a one-line change). A routine prompt stays one or two sentences: name things precisely and add no step or check the task doesn't need. For any task, what must stay out: new features or deliverables, and actions the draft doesn't allow (pushing, deploying, deleting data, spending money, breaking a public interface).
+</before_writing>
+
+<writing>
+Then write the prompt inside <prompt></prompt> tags, in the user's voice, first person:
+- Say what to do, with the outcome in a clause when it changes how the agent should work.
+- Ask for the expert's work as concrete moves, not adjectives: "reproduce it with a failing test, then fix the cause" rather than "be thorough"; "profile it first and remove the biggest cost" rather than "make it faster". Name only the moves that decide the result; the agent plans the rest.
+- Point at the raw material by its exact name. Use the conversation and the project context to make concrete what the draft refers to (the file, function, error, number or decision), never to add topics it doesn't mention. Invent no file, tool, number or fact; where the expert's material may be out of reach, ask the agent to say what is missing rather than guess.
+- End with the judge: how the agent shows it worked and what counts as done. For a measurable result, state the target and ask for the real numbers against it, even if they fall short.
+- Raise the standard, never the scope or the permissions: no extra deliverable, audit, list or "also" the draft doesn't call for. A higher rung that would replace or enlarge the task gets at most one closing line asking the agent to propose it, and only when the user would clearly want it.
+</writing>
 
 <leave_out>
-The agent already reads the project's instruction files (CLAUDE.md) with every prompt and follows them, so restate none of their rules, workflows or definitions, not even as a reminder or as the way to check the result; name something they define without repeating its definition. Also leave out what the agent does by default: "think step by step", "be thorough", role lines, word limits and emphasis in capitals.
+- Role lines ("You are a senior engineer"), "think step by step", "be thorough", emphasis in capitals: the agent does the expert's work without being told to play one.
+- Rules the agent already receives: the rules, workflows and definitions of the project's instruction files, and any standing instruction such as commit-message trailers. Name what they define without repeating it.
+- Sentences about the draft, the user or what is unknown, such as "I haven't said how it breaks" or "I'm not sure what's wrong". Every sentence tells the agent what to do or what a good result is; the agent works out what the prompt leaves open.
+- Anything that makes the prompt longer without changing what the agent does or how well.
 </leave_out>
 
-<style>
-Write in the user's voice, first person. Say plainly what to do: change, investigate, or only explain. Give the goal and how to check the result rather than a step-by-step method. Keep code, paths, quotes, slash commands and @mentions exactly as written.
-
-Fit the shape to the draft: a few sentences of prose for a simple request; pasted errors, logs or code kept verbatim in a tag named for what they are; a numbered list only when order matters; short labeled sections only for a large feature. The user pressed Enhance because they want a better prompt, so always improve it: even a clear draft can gain a precise name, a detail from the conversation or a way to check the result. Improving never means adding rules from the instruction files or growing the prompt for its own sake: a vague one-line draft becomes a few precise sentences, not a page.
-</style>
+<shape>
+Write the shortest prompt that carries the task, the outcome, the expert's moves and the judge. Fit the shape to the task: a few sentences for a simple request; short labeled sections only for a large one; a numbered list only when order matters. Name only the edge cases most likely to break. A one-line draft becomes a few precise sentences, not a page. Keep pasted errors, logs and code verbatim, in a tag named for what they are, and keep code, paths, quotes, slash commands and @mentions exactly as written. The user pressed Enhance because they want a better prompt, so always improve it, even a clear one.
+</shape>
 
 <language>
 Write the prompt in the language of the text inside <draft_prompt>, whatever language the context uses.
 </language>
 
-<instructions_only>
-Every sentence of the prompt tells the agent what to do or what a good result is. No sentence describes what the user knows, has said, has pinned down or remembers, such as "I haven't said how it's broken" or "I'm not sure what's wrong, so". Leave unknowns unsaid, and add no instruction just because something is unknown: the agent works out on its own whatever the prompt does not specify.
-</instructions_only>`
+Reply with the <plan> block, then the <prompt> block, and nothing else.`
 }
 
-/** Takes the rewritten prompt out of the model's reply; undefined when nothing usable came back. */
+/**
+ * Takes the rewritten prompt out of the model's reply; undefined when nothing usable came back.
+ * The <plan> the model writes first is its own notes and never reaches the prompt box.
+ */
 export function extractPrompt(reply: string): string | undefined {
-  const tagged = [...reply.matchAll(/<prompt>([\s\S]*?)<\/prompt>/g)].at(-1)?.[1]
-  const text = (tagged ?? reply).trim()
+  const withoutPlan = reply.replace(/<plan>[\s\S]*?<\/plan>/g, '')
+  // The last <prompt> block; one cut short by the token cap runs to the end of the reply.
+  const tagged = [...withoutPlan.matchAll(/<prompt>([\s\S]*?)(?:<\/prompt>|$)/g)].at(-1)?.[1]
+  const text = (tagged ?? (withoutPlan.includes('<plan>') ? '' : withoutPlan)).trim()
   return text === '' ? undefined : text
 }
 
@@ -102,25 +123,38 @@ export function recentMessages<M extends { role: string; text: string }>(message
     .slice(-2 * RECENT_EXCHANGES)
 }
 
-/**
- * The project's context, read live: project-context.md and the end of the conversation.
- * CLAUDE.md, skills and tools are left out: the agent that runs the prompt already has them.
- */
-async function projectContext($: EngineInterface): Promise<string> {
-  const parts: string[] = [`Working directory: ${await $.session.cwd()}`]
+/** What the enhancer knows of the project: where it runs, its project-context.md and the latest messages. */
+export type ProjectContext = {
+  cwd: string
+  contextFile?: { path: string; text: string }
+  messages: readonly { role: string; text: string }[]
+}
+
+/** The system prompt: the enhancer's job, then the project's context. */
+export function enhancerSystem(context: ProjectContext): string {
+  const parts: string[] = [`Working directory: ${context.cwd}`]
   // project-context.md describes the project itself (what it is, its parts, its files), so it is sent whole.
-  const contextPath = await projectContextPath($)
-  const contextText = await $.fs.read(contextPath).catch(() => '')
-  if (contextText.trim() !== '') {
-    parts.push(`<project_context path="${contextPath}">\n${clip(contextText, MAX_CONTEXT_FILE_CHARS)}\n</project_context>`)
+  if (context.contextFile !== undefined && context.contextFile.text.trim() !== '') {
+    const { path, text } = context.contextFile
+    parts.push(`<project_context path="${path}">\n${clip(text, MAX_CONTEXT_FILE_CHARS)}\n</project_context>`)
   }
-  const messages = await $.session.messages().catch(() => [])
-  const recent = recentMessages(Array.isArray(messages) ? messages : [])
+  const recent = recentMessages(context.messages)
   if (recent.length > 0) {
     const lines = recent.map(m => `<${m.role}>\n${clip(m.text, MAX_MESSAGE_CHARS)}\n</${m.role}>`)
     parts.push(`The conversation so far (latest messages):\n${lines.join('\n')}`)
   }
-  return `You are a prompt enhancer. You turn a developer's draft into the instruction they send to their AI coding agent in this project. Your whole reply is that instruction, written as the developer would send it: no explanation, commentary or answer of your own. The project's context:\n\n${parts.join('\n\n')}`
+  return `You are a prompt enhancer. You turn a developer's draft into the prompt they send to their AI coding agent in this project: aimed at the outcome they want, held to the standard of the field's best, and checked by more than the agent's word. You write that prompt; you never do the task or answer the draft. The project's context:\n\n${parts.join('\n\n')}`
+}
+
+/**
+ * The project's context, read live: project-context.md and the end of the conversation.
+ * CLAUDE.md, skills and tools are left out: the agent that runs the prompt already has them.
+ */
+async function projectContext($: EngineInterface): Promise<ProjectContext> {
+  const path = await projectContextPath($)
+  const text = await $.fs.read(path).catch(() => '')
+  const messages = await $.session.messages().catch(() => [])
+  return { cwd: await $.session.cwd(), contextFile: { path, text }, messages: Array.isArray(messages) ? messages : [] }
 }
 
 /** Rewrites the draft with one Sonnet call at medium effort, fed the project's context. */
@@ -128,7 +162,7 @@ async function rewrite($: EngineInterface, draft: string): Promise<{ text: strin
   const reply = await $.model.complete({
     model: MODEL,
     effort: EFFORT,
-    system: await projectContext($),
+    system: enhancerSystem(await projectContext($)),
     prompt: enhanceRequest(draft, await $.session.model()),
     maxTokens: 4000,
     timeoutMs: 120000,
