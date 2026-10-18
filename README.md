@@ -29,26 +29,19 @@ Add a `project-context.md` file to your project: a short description of the proj
 
 ## How it works
 
-The AI reads your draft, the end of your conversation and your `project-context.md`. Before it writes, it works out:
+The mod reads your draft and the last messages of your chat. It also reads your `project-context.md`, if you have one. Then it rewrites your draft the way an expert would. It puts the new prompt in the prompt box. It never sends it.
 
-- **The goal behind the task**: what should be true once it's done, so Claude aims at that and not only at your words.
-- **What the best expert would do**: start from the real code, logs or data, and use the method that decides the result, such as reproducing a bug before fixing it or measuring before optimizing.
-- **How to prove it worked**: a test that fails before and passes after, a measurement against a target, a run of the real app. Not Claude saying "done".
-- **Another field's eye**, only when the result has to land with people: a UX writer for error messages, a copywriter for a launch email.
-
-Then it writes the prompt for the model of your session and puts it in the prompt box. It raises the standard, never the size of the job: no extra features, nothing you didn't allow (like pushing or deploying), and a routine request such as "commit and push" stays short. It never does the task itself.
-
-The method comes from Felix Rieseberg's [How to be more ambitious](https://felixrieseberg.com/how-to-be-more-ambitious-a-tutorial-for-humans-with-models/).
+The idea comes from Felix Rieseberg's [How to be more ambitious](https://felixrieseberg.com/how-to-be-more-ambitious-a-tutorial-for-humans-with-models/).
 
 ## Model
 
-The mod uses `sonnet` at `medium` effort. Each click uses your Claude Code account.
+The mod uses the `sonnet` model at `medium` effort. Each click counts on your Claude Code account.
 
-To change it, edit `MODEL` and `EFFORT` at the top of `hooks/register.tsx`, then start a new session. An update replaces your edits, so fork the repository to keep them.
+To change this, edit `MODEL` and `EFFORT` at the top of `hooks/register.tsx`. Then start a new session. An update deletes your edits. To keep them, fork the repository.
 
 ## Update
 
-In your shell:
+Run these two commands in your shell:
 
 ```
 claude plugin marketplace update prompt-enhancer
@@ -57,9 +50,9 @@ claude plugin update prompt-enhancer@prompt-enhancer
 
 Then start a new session.
 
-To update automatically, run `/plugin` in a terminal session, open **Marketplaces**, select `prompt-enhancer`, then **Enable auto-update**.
+To update on its own: run `/plugin` in a terminal session. Open **Marketplaces**, pick `prompt-enhancer`, then pick **Enable auto-update**.
 
-**Claude desktop app:** it doesn't update plugins automatically, even with auto-update on. Run the two commands above from time to time to get the latest version.
+The Claude desktop app never updates plugins on its own. Run the two commands above from time to time.
 
 ## License
 
