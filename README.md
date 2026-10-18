@@ -1,6 +1,6 @@
 # Prompt Enhancer
 
-A Claude Code mod that turns a rough prompt into one that gets a better result: aimed at what you actually want, held to the standard of the best expert in the field, and checked by more than Claude's word. It uses the project you are working in.
+A Claude Code mod that turns a rough prompt into one that gets a better result. 
 
 Type a prompt, then click the orange **Enhance prompt** button above the prompt box. Review the result and send it yourself. **Restore original** puts your text back.
 
