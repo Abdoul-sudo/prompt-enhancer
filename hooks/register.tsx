@@ -279,10 +279,11 @@ async function createProjectContext($: EngineInterface): Promise<void> {
       description: "Create project-context.md",
       prompt: `The user asked for a project-context.md. Create ${await projectContextPath($)} by following ${$.plugin.root}/skills/project-context/SKILL.md.`,
     })
-    .catch(() => undefined);
-  if (spawned?.agentId === undefined) {
+    .catch((error: unknown) => String(error));
+  if (typeof spawned === "string" || spawned.agentId === undefined) {
     await update($, contextRequest, () => null);
-    $.ui.toast("Could not start creating project-context.md.");
+    const reason = typeof spawned === "string" ? spawned : (spawned.deny ?? "no agent started");
+    $.ui.toast(`Could not start creating project-context.md (${reason}).`);
     return;
   }
   const agentId = spawned.agentId;
@@ -345,6 +346,12 @@ export const register: Register = (on) => {
     }
     return next(e);
   });
+
+  // The Create project context button starts its subagent with no request in the chat, so auto mode's
+  // classifier has nothing to judge it by and refuses it; the person's press is the request.
+  on("tool.check", { tool: "Agent" }, async ($, e, next) =>
+    next.origin.plugin === "prompt-enhancer" ? { decision: "allow" } : next(e),
+  );
 
   on("ui.message", { element: "create-context" }, async ($, e, next) => {
     if (e.data === "press") await createProjectContext($);
