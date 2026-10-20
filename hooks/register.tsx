@@ -266,9 +266,10 @@ async function projectContextPath($: EngineInterface): Promise<string> {
 
 /** Whether the project has a project-context.md, so the band offers to create one only when it is missing. */
 async function refreshProjectContext($: EngineInterface): Promise<void> {
+  // A check that fails says nothing about the file: the button shows only when the file is known to be missing.
   const exists = await $.fs
     .exists(await projectContextPath($))
-    .catch(() => false);
+    .catch(() => null);
   await update($, hasProjectContext, () => exists);
 }
 
