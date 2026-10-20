@@ -323,14 +323,20 @@ export const register: Register = (on) => {
     text: await enhance($, e.args),
   }));
 
-  // The queued command starts as the next main-loop turn.
+  // The queued command starts as the next main-loop turn. Each main-loop turn also checks the file again.
   on("turn.start", async ($, e, next) => {
-    if (
-      e.agentId === undefined &&
-      (await read($, contextRequest)) === "queued"
-    ) {
-      await update($, contextRequest, () => "running");
+    if (e.agentId === undefined) {
+      if ((await read($, contextRequest)) === "queued")
+        await update($, contextRequest, () => "running");
+      await refreshProjectContext($).catch(() => undefined);
     }
+    return next(e);
+  });
+
+  // The desktop app prepares a session before the person picks its folder, so session.start may have
+  // checked another folder; the app attaching to the session is the first sign of the real one.
+  on("session.attach", async ($, e, next) => {
+    await refreshProjectContext($).catch(() => undefined);
     return next(e);
   });
 
@@ -366,10 +372,12 @@ export const register: Register = (on) => {
     const draft = await read($, hasDraft);
     const before = await read($, original);
     const canEnhance = !busy && draft !== false;
+    // The last check may have looked at another folder (see session.attach): look again before offering.
     const canCreateContext =
       !busy &&
       (await read($, contextRequest)) === null &&
-      (await read($, hasProjectContext)) === false;
+      (await read($, hasProjectContext)) === false &&
+      (await $.fs.exists(await projectContextPath($)).catch(() => true)) === false;
     if (!busy && !canEnhance && before === null && !canCreateContext)
       return next(e);
     const elements = $.ui.resolve(e);
