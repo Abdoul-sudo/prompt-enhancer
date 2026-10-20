@@ -27,6 +27,9 @@ const MAX_MESSAGE_CHARS = 2000;
 const RECENT_EXCHANGES = 8;
 /** The project description the mod reads; its `project-context` skill writes it. */
 const PROJECT_CONTEXT_FILE = "project-context.md";
+const LIVE_AGENT: ReadonlySet<string> = new Set(["pending", "running", "waiting"]);
+/** The mod's own skill as a slash command: the button runs it as if the person typed it. */
+const PROJECT_CONTEXT_COMMAND = "prompt-enhancer:project-context";
 const MAX_CONTEXT_FILE_CHARS = 20000;
 /** Alias the engine resolves to the newest Sonnet, as `--model sonnet` does. */
 const MODEL = "sonnet";
@@ -269,25 +272,16 @@ async function refreshProjectContext($: EngineInterface): Promise<void> {
   await update($, hasProjectContext, () => exists);
 }
 
-/** Has a background subagent write project-context.md with the mod's skill, outside the conversation. */
+/** Asks Claude to write project-context.md with the mod's skill, as a turn the user watches. */
 async function createProjectContext($: EngineInterface): Promise<void> {
-  // One request at a time: the button hides until the subagent ends.
+  // One request at a time: the button hides until the turn that answers it ends.
   if ((await read($, contextRequest)) !== null) return;
-  await update($, contextRequest, () => "starting");
-  const spawned = await $.agent
-    .spawn({
-      description: "Create project-context.md",
-      prompt: `The user asked for a project-context.md. Create ${await projectContextPath($)} by following ${$.plugin.root}/skills/project-context/SKILL.md.`,
-    })
-    .catch((error: unknown) => String(error));
-  if (typeof spawned === "string" || spawned.agentId === undefined) {
+  await update($, contextRequest, () => "queued");
+  // The skill holds the rules; the button only runs it. The command waits for the session to be idle.
+  void $.command.run({ command: PROJECT_CONTEXT_COMMAND }).catch(async (error: unknown) => {
     await update($, contextRequest, () => null);
-    const reason = typeof spawned === "string" ? spawned : (spawned.deny ?? "no agent started");
-    $.ui.toast(`Could not start creating project-context.md (${reason}).`);
-    return;
-  }
-  const agentId = spawned.agentId;
-  await update($, contextRequest, () => agentId);
+    $.ui.toast(`Could not run /${PROJECT_CONTEXT_COMMAND} (${String(error)}).`);
+  });
 }
 
 export const register: Register = (on) => {
@@ -328,30 +322,31 @@ export const register: Register = (on) => {
     text: await enhance($, e.args),
   }));
 
-  // A turn may have created or removed project-context.md; the subagent that writes it ends the request.
-  on("turn.complete", async ($, e, next) => {
-    if (e.agentId === undefined) {
-      await refreshProjectContext($).catch(() => undefined);
-    } else if ((await read($, contextRequest)) === e.agentId) {
-      await refreshProjectContext($).catch(() => undefined);
-      await update($, contextRequest, () => null);
-      const created = await read($, hasProjectContext);
-      $.ui.toast(
-        created
-          ? "project-context.md created. Read it and fix what is wrong."
-          : "Could not create project-context.md.",
-      );
-      // The subagent's report, with any question about the project, reaches the user only through this line.
-      if (created && e.answer.trim() !== "") $.ui.log(e.answer);
+  // The queued command starts as the next main-loop turn.
+  on("turn.start", async ($, e, next) => {
+    if (
+      e.agentId === undefined &&
+      (await read($, contextRequest)) === "queued"
+    ) {
+      await update($, contextRequest, () => "running");
     }
     return next(e);
   });
 
-  // The Create project context button starts its subagent with no request in the chat, so auto mode's
-  // classifier has nothing to judge it by and refuses it; the person's press is the request.
-  on("tool.check", { tool: "Agent" }, async ($, e, next) =>
-    next.origin.plugin === "prompt-enhancer" ? { decision: "allow" } : next(e),
-  );
+  // A turn may have created or removed project-context.md. The request outlives the turn that ran the
+  // command while its subagents still work, since a later turn picks up their results.
+  on("turn.complete", async ($, e, next) => {
+    if (e.agentId === undefined) {
+      await refreshProjectContext($).catch(() => undefined);
+      if ((await read($, contextRequest)) === "running") {
+        const agents = await $.agent.list().catch(() => []);
+        const isWorking = agents.some((agent) => LIVE_AGENT.has(agent.status));
+        if ((await read($, hasProjectContext)) || !isWorking)
+          await update($, contextRequest, () => null);
+      }
+    }
+    return next(e);
+  });
 
   on("ui.message", { element: "create-context" }, async ($, e, next) => {
     if (e.data === "press") await createProjectContext($);
@@ -370,18 +365,11 @@ export const register: Register = (on) => {
     const draft = await read($, hasDraft);
     const before = await read($, original);
     const canEnhance = !busy && draft !== false;
-    const isCreatingContext = (await read($, contextRequest)) !== null;
     const canCreateContext =
       !busy &&
-      !isCreatingContext &&
+      (await read($, contextRequest)) === null &&
       (await read($, hasProjectContext)) === false;
-    if (
-      !busy &&
-      !canEnhance &&
-      before === null &&
-      !canCreateContext &&
-      !isCreatingContext
-    )
+    if (!busy && !canEnhance && before === null && !canCreateContext)
       return next(e);
     const elements = $.ui.resolve(e);
     const { Box, Button, Text } = elements;
@@ -411,9 +399,6 @@ export const register: Register = (on) => {
                 </Text>
               </Button>
             ))}
-          {isCreatingContext && (
-            <Text color={BLUE}>Creating project context…</Text>
-          )}
           {busy && <Text color={ORANGE}>Enhancing prompt…</Text>}
           {canEnhance &&
             (Client !== undefined ? (
