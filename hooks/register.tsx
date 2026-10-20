@@ -25,11 +25,11 @@ const contextRequest = atom(
 const MAX_MESSAGE_CHARS = 2000;
 /** One exchange is the user's message and the agent's reply. */
 const RECENT_EXCHANGES = 8;
-/** The project description the mod reads; its `project-context` skill writes it. */
+/** The project description the mod reads; its `create-project-context` and `project-context` skills write it. */
 const PROJECT_CONTEXT_FILE = "project-context.md";
 const LIVE_AGENT: ReadonlySet<string> = new Set(["pending", "running", "waiting"]);
 /** The mod's own skill as a slash command: the button runs it as if the person typed it. */
-const PROJECT_CONTEXT_COMMAND = "prompt-enhancer:project-context";
+const PROJECT_CONTEXT_COMMAND = "prompt-enhancer:create-project-context";
 const MAX_CONTEXT_FILE_CHARS = 20000;
 /** Alias the engine resolves to the newest Sonnet, as `--model sonnet` does. */
 const MODEL = "sonnet";

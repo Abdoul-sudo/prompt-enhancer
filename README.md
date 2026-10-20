@@ -40,8 +40,8 @@ Inspired by Felix Rieseberg's [How to be more ambitious](https://felixrieseberg.
 
 Add a `project-context.md` file to your project: a short description of the project and its features. The mod reads it to write better prompts.
 
-- **Create it:** click the blue **Create project context** button. It shows when the file is missing. Claude writes the file in your chat and asks about what it can't find in the project.
-- **Keep it current:** Claude updates the file after big changes. You can also run `/prompt-enhancer:project-context`.
+- **Create it:** click the blue **Create project context** button. It shows when the file is missing. Claude writes the file in your chat with Opus at high effort, and asks about what it can't find in the project. You can also run `/prompt-enhancer:create-project-context`.
+- **Keep it current:** Claude updates the file after big changes, with your session's model. You can also run `/prompt-enhancer:project-context`.
 
 ![The blue Create project context button above the prompt box](docs/create-project-context.png)
 
