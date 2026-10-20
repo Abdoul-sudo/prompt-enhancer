@@ -1,6 +1,6 @@
 # Prompt Enhancer
 
-A Claude Code mod that turns a rough prompt into one that gets a better result. 
+A Claude Code mod that turns a rough prompt into one that gets a better result.
 
 Type a prompt, then click the orange **Enhance prompt** button above the prompt box. Review the result and send it yourself. **Restore original** puts your text back.
 
@@ -13,25 +13,37 @@ You can also type `/enhance <prompt>` and press Enter. Nothing goes to Claude: t
 In a Claude Code terminal session, run:
 
 ```
-/plugin install prompt-enhancer --marketplace Abdoul-sudo/prompt-enhancer
+/plugin install prompt-enhancer --marketplace https://github.com/Abdoul-sudo/prompt-enhancer.git
 ```
 
 Answer `y`, then pick the user scope. The mod loads in every session, the desktop app included.
 
-### Better results: project-context.md
+## How it works
+
+The mod reads:
+
+- your draft;
+- the last 8 exchanges of your chat (your messages and Claude's replies);
+- your `project-context.md`, if you have one.
+
+Then it rewrites your draft the way an expert would:
+
+- It keeps what you asked for. A question stays a question.
+- It makes the goal clear and asks for the real cause of a problem.
+- It says how to check that the result works.
+- It adds no file names of its own.
+- It gives no approach or steps, so Claude picks its own method: Anthropic's [prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices) advise general instructions over prescriptive steps.
+
+Inspired by Felix Rieseberg's [How to be more ambitious](https://felixrieseberg.com/how-to-be-more-ambitious-a-tutorial-for-humans-with-models/).
+
+## Project context
 
 Add a `project-context.md` file to your project: a short description of the project and its features. The mod reads it to write better prompts.
 
-- **Create it:** click the blue **Create project context** button. It shows when the file is missing.
+- **Create it:** click the blue **Create project context** button. It shows when the file is missing. Claude writes the file in your chat and asks about what it can't find in the project.
 - **Keep it current:** Claude updates the file after big changes. You can also run `/prompt-enhancer:project-context`.
 
 ![The blue Create project context button above the prompt box](docs/create-project-context.png)
-
-## How it works
-
-The mod reads your draft and the last messages of your chat. It also reads your `project-context.md`, if you have one. Then it rewrites your draft the way an expert would. It puts the new prompt in the prompt box. It never sends it.
-
-The idea comes from Felix Rieseberg's [How to be more ambitious](https://felixrieseberg.com/how-to-be-more-ambitious-a-tutorial-for-humans-with-models/).
 
 ## Model
 
