@@ -334,11 +334,14 @@ export const register: Register = (on) => {
     } else if ((await read($, contextRequest)) === e.agentId) {
       await refreshProjectContext($).catch(() => undefined);
       await update($, contextRequest, () => null);
+      const created = await read($, hasProjectContext);
       $.ui.toast(
-        (await read($, hasProjectContext))
-          ? "project-context.md created."
+        created
+          ? "project-context.md created. Read it and fix what is wrong."
           : "Could not create project-context.md.",
       );
+      // The subagent's report, with any question about the project, reaches the user only through this line.
+      if (created && e.answer.trim() !== "") $.ui.log(e.answer);
     }
     return next(e);
   });
