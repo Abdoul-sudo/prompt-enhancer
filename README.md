@@ -10,7 +10,7 @@ You can also type `/enhance <prompt>` and press Enter. Nothing goes to Claude: t
 
 ![Three short drafts, a bug, a slow page and a question, each improved with one click on Enhance prompt](docs/demo.gif)
 
-## Install
+## Installation
 
 In a Claude Code terminal session, run:
 
