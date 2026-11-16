@@ -1,14 +1,34 @@
-# Prompt Enhancer
+<h1 align="center">Prompt Enhancer</h1>
+
+<p align="center">
+  <em>Turn a rough prompt into one that gets a better result, in one click.</em>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Claude%20Code-mod-0F766E?style=flat-square&labelColor=334155&logo=claude&logoColor=white" alt="Claude Code mod">
+  <img src="https://img.shields.io/badge/license-MIT-0F766E?style=flat-square&labelColor=334155" alt="MIT license">
+  <img src="https://img.shields.io/badge/runs%20in-desktop%20%2B%20terminal-0F766E?style=flat-square&labelColor=334155" alt="Runs in the desktop app and the terminal">
+</p>
+
+<p align="center">
+  <img src="docs/demo.gif" width="880" alt="Three short drafts, a bug, a slow page and a question, each improved with one click on Enhance prompt">
+</p>
+
+<p align="center">
+  <a href="#installation">Installation</a> ·
+  <a href="#usage">Usage</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="#project-context">Project context</a> ·
+  <a href="#in-the-terminal">Terminal</a> ·
+  <a href="#model">Model</a> ·
+  <a href="#update">Update</a>
+</p>
+
+---
 
 A Claude Code mod that turns a rough prompt into one that gets a better result.
 
 Type a prompt, then click the orange **Enhance prompt** button above the prompt box. Review the result and send it yourself. **Restore original** puts your text back.
-
-In a terminal, the buttons take clicks only in fullscreen mode: run `/tui fullscreen` once. Without it, use `/enhance <prompt>` and `/prompt-enhancer:create-project-context`.
-
-You can also type `/enhance <prompt>` and press Enter. Nothing goes to Claude: the result goes in the prompt box.
-
-![Three short drafts, a bug, a slow page and a question, each improved with one click on Enhance prompt](docs/demo.gif)
 
 ## Installation
 
@@ -19,6 +39,20 @@ In a Claude Code terminal session, run:
 ```
 
 Answer `y`, then pick the user scope. The mod loads in every session, the desktop app included.
+
+## Usage
+
+| Task | Action |
+| --- | --- |
+| Improve a draft | Type it, then click **Enhance prompt**. Review the result, then send it. |
+| Get your draft back | Click **Restore original**. |
+| Create the project context | Click **Create project context**. It shows when `project-context.md` is missing. |
+
+| Command | What it does |
+| --- | --- |
+| `/enhance <prompt>` | Improves `<prompt>`. Nothing goes to Claude: the result goes in the prompt box. |
+| `/prompt-enhancer:create-project-context` | Creates `project-context.md`. |
+| `/prompt-enhancer:project-context` | Updates `project-context.md`. |
 
 ## How it works
 
@@ -45,7 +79,13 @@ Add a `project-context.md` file to your project: a short description of the proj
 - **Create it:** click the blue **Create project context** button. It shows when the file is missing. Claude writes the file in your chat with Opus at high effort, and asks about what it can't find in the project. You can also run `/prompt-enhancer:create-project-context`.
 - **Keep it current:** Claude updates the file after big changes, with your session's model. You can also run `/prompt-enhancer:project-context`.
 
-![The blue Create project context button above the prompt box](docs/create-project-context.png)
+<p align="center">
+  <img src="docs/create-project-context.png" width="817" alt="The blue Create project context button above the prompt box">
+</p>
+
+## In the terminal
+
+In a terminal, the buttons take clicks only in fullscreen mode: run `/tui fullscreen` once. Without it, use `/enhance <prompt>` and `/prompt-enhancer:create-project-context`.
 
 ## Model
 
@@ -57,7 +97,7 @@ To change this, edit `MODEL` and `EFFORT` at the top of `hooks/register.tsx`. Th
 
 Run these two commands in your shell:
 
-```
+```sh
 claude plugin marketplace update prompt-enhancer
 claude plugin update prompt-enhancer@prompt-enhancer
 ```
