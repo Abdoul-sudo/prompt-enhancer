@@ -15,98 +15,128 @@
 </p>
 
 <p align="center">
-  <a href="#installation">Installation</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#update">Update</a> ·
   <a href="#usage">Usage</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#project-context">Project context</a> ·
   <a href="#in-the-terminal">Terminal</a> ·
   <a href="#model">Model</a> ·
-  <a href="#update">Update</a>
+  <a href="#privacy-and-access">Privacy</a>
 </p>
 
 ---
 
-A Claude Code mod that turns a rough prompt into one that gets a better result.
+## What it does
 
-Type a prompt, then click the orange **Enhance prompt** button above the prompt box. Review the result and send it yourself. **Restore original** puts your text back.
+- **Improves your prompt in one click**: a short draft becomes a clear prompt that gets a better result.
+- **Knows your project**: it reads your chat and a short description of your project.
+- **Lets you check first**: the new prompt goes in the prompt box, and you send it yourself.
+- **Gives your draft back**: one click restores your original text.
 
-## Installation
+## Quick start
 
-In a Claude Code terminal session, run:
+1. Install Prompt Enhancer:
 
-```
-/plugin install prompt-enhancer --marketplace https://github.com/Abdoul-sudo/prompt-enhancer.git
-```
+   ```sh
+   claude plugin marketplace add Abdoul-sudo/prompt-enhancer
+   claude plugin install prompt-enhancer@prompt-enhancer
+   ```
 
-Answer `y`, then pick the user scope. The mod loads in every session, the desktop app included.
+2. Restart Claude Code.
 
-## Usage
-
-| Task | Action |
-| --- | --- |
-| Improve a draft | Type it, then click **Enhance prompt**. Review the result, then send it. |
-| Get your draft back | Click **Restore original**. |
-| Create the project context | Click **Create project context**. It shows when `project-context.md` is missing. |
-
-| Command | What it does |
-| --- | --- |
-| `/enhance <prompt>` | Improves `<prompt>`. Nothing goes to Claude: the result goes in the prompt box. |
-| `/prompt-enhancer:create-project-context` | Creates `project-context.md`. |
-| `/prompt-enhancer:project-context` | Updates `project-context.md`. |
-
-## How it works
-
-The mod reads:
-
-- your draft;
-- the last 8 exchanges of your chat (your messages and Claude's replies);
-- your `project-context.md`, if you have one.
-
-Then it rewrites your draft the way an expert would:
-
-- It keeps what you asked for. A question stays a question.
-- It makes the goal clear and asks for the real cause of a problem.
-- It says how to check that the result works.
-- It adds no file names of its own.
-- It gives no approach or steps, so Claude picks its own method: Anthropic's [prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices) advise general instructions over prescriptive steps.
-
-Inspired by Felix Rieseberg's [How to be more ambitious](https://felixrieseberg.com/how-to-be-more-ambitious-a-tutorial-for-humans-with-models/).
-
-## Project context
-
-Add a `project-context.md` file to your project: a short description of the project and its features. The mod reads it to write better prompts.
-
-- **Create it:** click the blue **Create project context** button. It shows when the file is missing. Claude writes the file in your chat with Opus at high effort, and asks about what it can't find in the project. You can also run `/prompt-enhancer:create-project-context`.
-- **Keep it current:** Claude updates the file after big changes, with your session's model. You can also run `/prompt-enhancer:project-context`.
-
-<p align="center">
-  <img src="docs/create-project-context.png" width="817" alt="The blue Create project context button above the prompt box">
-</p>
-
-## In the terminal
-
-In a terminal, the buttons take clicks only in fullscreen mode: run `/tui fullscreen` once. Without it, use `/enhance <prompt>` and `/prompt-enhancer:create-project-context`.
-
-## Model
-
-The mod uses the `sonnet` model at `medium` effort. Each click counts on your Claude Code account.
-
-To change this, edit `MODEL` and `EFFORT` at the top of `hooks/register.tsx`. Then start a new session. An update deletes your edits. To keep them, fork the repository.
+When you type in the prompt box, an orange **Enhance prompt** button then appears above it.
 
 ## Update
 
-Run these two commands in your shell:
+By default, Claude Code does not update Prompt Enhancer. You can turn on automatic updates one time:
+
+1. In Claude Code, type `/plugin`.
+2. Open the **Marketplaces** tab.
+3. Select **prompt-enhancer**.
+4. Select **Enable auto-update**.
+
+After that, each new version comes when you start a session.
+
+You can also update by hand, with these commands:
 
 ```sh
 claude plugin marketplace update prompt-enhancer
 claude plugin update prompt-enhancer@prompt-enhancer
 ```
 
-Then start a new session.
+Then restart Claude Code, or type `/reload-plugins`.
 
-To update on its own: run `/plugin` in a terminal session. Open **Marketplaces**, pick `prompt-enhancer`, then pick **Enable auto-update**.
+## Usage
 
-The Claude desktop app never updates plugins on its own. Run the two commands above from time to time.
+1. **Enhance prompt** rewrites the draft in the prompt box. The result takes the place of your draft.
+2. **↶ Restore original** puts your draft back.
+
+Nothing goes to Claude until you send the prompt.
+
+| Command | What it does |
+| --- | --- |
+| `/enhance <prompt>` | Rewrites `<prompt>` and puts the result in the prompt box. |
+| `/prompt-enhancer:create-project-context` | Creates `project-context.md`. |
+| `/prompt-enhancer:project-context` | Updates `project-context.md`. |
+
+## How it works
+
+To rewrite your draft, the mod reads:
+
+- your draft;
+- the last 8 exchanges of your chat (your messages and Claude's replies);
+- your `project-context.md`, if you have one.
+
+The new prompt:
+
+- keeps what you asked for. A question stays a question.
+- makes the goal clear, and asks for the real cause of a problem.
+- says how to check that the result works.
+- keeps your code, paths and error messages exactly as you wrote them.
+- adds no file names or facts that the project does not show.
+- gives no steps. Claude picks its own method, as Anthropic's [prompting best practices](https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices) advise.
+
+Inspired by Felix Rieseberg's [How to be more ambitious](https://felixrieseberg.com/how-to-be-more-ambitious-a-tutorial-for-humans-with-models/).
+
+## Project context
+
+`project-context.md` is a short description of your project and its features, at the root of the project. With it, the mod writes better prompts.
+
+When the file is missing, a blue **Create project context** button appears above the prompt box. Claude then writes the file in your chat, with Opus at high effort. It asks you about what it cannot find in the project.
+
+<p align="center">
+  <img src="docs/create-project-context.png" width="817" alt="The blue Create project context button above the prompt box">
+</p>
+
+After big changes to the project, Claude updates the file with the model of your session.
+
+## In the terminal
+
+The mod works in the terminal too. Clicks on the buttons need the fullscreen mode: `/tui fullscreen`. Without it, the `/enhance <prompt>` command does the same work.
+
+## Model
+
+The mod uses Sonnet at medium effort. Each rewrite counts on your Claude Code plan.
+
+To use another model, change `MODEL` and `EFFORT` at the top of `hooks/register.tsx`, then start a new session. An update removes this change. To keep it, fork the repository.
+
+## Privacy and access
+
+The mod runs in Claude Code. This is everything it can access:
+
+| Access | What the mod does |
+| --- | --- |
+| Reads | Your draft, the last 8 exchanges of the chat, and `project-context.md`. |
+| Sends | These texts to Claude, with your Claude Code account, to write the new prompt. |
+| Writes | Only the prompt box. Claude writes `project-context.md` when you ask for it. |
+| Network | Nothing else. |
+
+## Uninstall
+
+```sh
+claude plugin uninstall prompt-enhancer@prompt-enhancer
+```
 
 ## License
 

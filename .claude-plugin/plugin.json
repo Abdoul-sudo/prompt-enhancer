@@ -1,6 +1,6 @@
 {
   "name": "prompt-enhancer",
-  "description": "Rewrites the draft in the prompt box into a better prompt for the active project: aimed at the outcome, held to an expert standard and checked by more than the agent's word, without sending it; one press restores the original",
+  "description": "Claude Code mod to improve your prompt in one click, using your chat and your project context. You check the result before you send it.",
   "types": "./types/index.d.ts",
   "author": { "name": "Abdoul-sudo", "url": "https://github.com/Abdoul-sudo" },
   "repository": "https://github.com/Abdoul-sudo/prompt-enhancer",

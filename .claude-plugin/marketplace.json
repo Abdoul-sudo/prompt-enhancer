@@ -1,6 +1,6 @@
 {
   "name": "prompt-enhancer",
-  "description": "A Claude Code mod that rewrites rough prompts into better ones using the active project's context",
+  "description": "Claude Code mod to improve your prompt in one click, using your chat and your project context. You check the result before you send it.",
   "owner": {
     "name": "Abdoul-sudo"
   },
