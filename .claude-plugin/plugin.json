@@ -1,5 +1,7 @@
 {
   "name": "prompt-enhancer",
+  "displayName": "Prompt Enhancer",
+  "version": "1.0.0",
   "description": "Claude Code mod to improve your prompt in one click, using your chat and your project context. You check the result before you send it.",
   "types": "./types/index.d.ts",
   "author": { "name": "Abdoul-sudo", "url": "https://github.com/Abdoul-sudo" },
